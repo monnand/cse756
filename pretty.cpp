@@ -64,6 +64,7 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl) {
 string prettyPrint(SgProject* project) {
   SgFilePtrList& file_list = project->get_fileList();
   SgFilePtrList::const_iterator file_iter;
+  string ret;
   for (file_iter = file_list.begin(); 
        file_iter != file_list.end(); 
        file_iter++) {

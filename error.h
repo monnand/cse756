@@ -7,11 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
-#ifdef __cplusplus 
-extern "C" {
-#endif
-
 /*
 typedef enum debug_level_e {
 	DEBUG_SILENT = 0,
@@ -62,6 +57,11 @@ typedef enum debug_level_e {
 	err_quit msg;	\
 } while(0)
 */
+
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
 
 void err_quit(const char *, ...);
 void err_ret(const char *, ...);
