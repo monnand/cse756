@@ -20,6 +20,32 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   cout << "[Scope " << name << "] Num variable symbols: " << num_vars << endl;      
 }
 
+void examineExpr(SgExpression *expr, ostream &out) {
+    stringstream ss1;
+    stringstream ss2;
+    stringstream ss3;
+    SgExpression *e1;
+    SgExpression *e2;
+    switch(expr->variantT()) {
+        case V_SgAddOp:
+            SgAddOp *addop = isSgAddOp(expr);
+            e1 = addop->get_lhs_operand();
+            examineExpr(e1, ss1);
+            e2 = addop->get_rhs_operand();
+            examineExpr(e2, ss2);
+            out << ss1.str() << "+" << ss2.str();
+            break;
+        case V_SgIntVal:
+            SgIntVal *intval = isSgIntVal(expr);
+            out << intval->get_value();
+            break;
+        case V_SgLongIntVal:
+            SgLongIntVal *longval = isSgLongIntVal(expr);
+            out << longval->get_value();
+            break;
+    }
+}
+
 void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
   SgInitializedNamePtrList& name_list = decl->get_variables();
   SgInitializedNamePtrList::const_iterator name_iter;
@@ -29,11 +55,35 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     SgInitializedName* name = *name_iter;
     SgSymbol* symbol = name->get_symbol_from_symbol_table();
     SgType *type = symbol->get_type();
+    int nr_stars = 0;
+    stringstream ss1;
 
-    if (type->class_name() == "SgArrayType") {
-        SgArrayType *atype = static_cast<SgArrayType *>(type);
-        out << "ArrayType" << atype->get_base_type()->class_name()<< endl;
+    while (isSgArrayType(type) ||
+            isSgPointerType(type)) {
+        if (isSgArrayType(type)) {
+            SgArrayType *atype = isSgArrayType(type);
+            SgExpression *expr = atype->get_index();
+
+            type = atype->get_base_type();
+            ss1 << "[";
+            examineExpr(expr, ss1);
+            ss1 << "]";
+        } else {
+            SgPointerType *ttype = isSgPointerType(type);
+            type = ttype->get_base_type();
+            nr_stars++;
+        }
     }
+
+    out << type->class_name() << " ";
+    for (int i = 0; i < nr_stars; ++i)
+        out << "*";
+    out << symbol->get_name().getString();
+    out << ss1.str();
+
+
+    /* end of this decl */
+    out << ";" << endl;
 
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
     cout << ",type:"<<symbol->get_type()->class_name();
