@@ -183,11 +183,46 @@ void examinePrimTypeName(SgType *type, ostream &out) {
         case V_SgTypeFloat:
             out << "float";
             break;
+        case V_SgTypeVoid:
+            out << "void";
+            break;
         default:
-            out << "UNKNOWN TYPE!!!";
+            out << "UNKNOWN TYPE!!! " << type->unparseToString() << endl;
             break;
     }
     return;
+}
+
+void examineType(SgType *type, ostream &out) {
+    int nr_stars = 0;
+    stringstream ss1;
+    if (NULL == type) {
+        out << "void";
+        return;
+    }
+    while (isSgArrayType(type) ||
+            isSgPointerType(type)) {
+        if (isSgArrayType(type)) {
+            SgArrayType *atype = isSgArrayType(type);
+            SgExpression *expr = atype->get_index();
+
+            type = atype->get_base_type();
+            ss1 << "[";
+            if (expr)
+                examineExpr(expr, ss1);
+            ss1 << "]";
+        } else {
+            SgPointerType *ttype = isSgPointerType(type);
+            type = ttype->get_base_type();
+            nr_stars++;
+        }
+    }
+
+    examinePrimTypeName(type, out);
+    out << " ";
+    for (int i = 0; i < nr_stars; ++i)
+        out << "*";
+    out << ss1.str();
 }
 
 void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
@@ -201,7 +236,7 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     SgType *type = symbol->get_type();
     int nr_stars = 0;
     stringstream ss1;
-
+    
     while (isSgArrayType(type) ||
             isSgPointerType(type)) {
         if (isSgArrayType(type)) {
@@ -246,8 +281,6 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     /* end of this decl */
     out << ";" << endl;
 
-
-
     /*
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
     cout << ",type:"<<symbol->get_type()->class_name();
@@ -264,8 +297,16 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
 }
 
 void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
-  SgSymbol* symbol = decl->get_symbol_from_symbol_table();
-  /*
+    SgSymbol* symbol = decl->get_symbol_from_symbol_table();
+    if (NULL == symbol)
+        return;
+    SgType *ret_type = decl->get_orig_return_type();
+    examineType(ret_type, out);
+
+    out << " " << symbol->get_name().getString();
+    out << endl;
+ 
+    /*
   if (symbol) { // for some reason, some functions do not have symbols
     cout << "[Func] Function (name:"<<symbol->get_name().getString();
     cout << ",type:"<<symbol->get_type()->class_name() << ")" << endl;
