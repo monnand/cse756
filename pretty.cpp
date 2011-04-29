@@ -1,4 +1,5 @@
 #include <rose.h>
+#include <error.h>
 using namespace std;
 
 void examineScopeStatement(SgScopeStatement* scope, string name) {

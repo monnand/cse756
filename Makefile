@@ -14,6 +14,7 @@
 
 SOURCE_FILES	=	\
 			main.cpp	\
+			error.cpp	\
 			pretty.cpp
 
 BINARY_FILE	=	mycompiler
