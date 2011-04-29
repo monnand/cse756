@@ -274,6 +274,17 @@ void examineInitializedName(SgInitializedName *name, ostream &out) {
     }
 }
 
+void examineStatement(SgStatement *stmt, ostream &out) {
+    if (NULL == stmt)
+        return;
+    switch(stmt->variantT()) {
+        case V_SgExprStatement:
+            examineExpr(stmt->get_expression(), out);
+            out << ";";
+            break;
+    }
+}
+
 void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
   SgInitializedNamePtrList& name_list = decl->get_variables();
   SgInitializedNamePtrList::const_iterator name_iter;
@@ -347,7 +358,10 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
 
 void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     SgSymbol* symbol = decl->get_symbol_from_symbol_table();
-    if (NULL == symbol)
+    SgFunctionDefinition* def = decl->get_definition();
+
+    /* We don't want to output the function withou definition */
+    if (NULL == symbol || NULL == def)
         return;
     SgType *ret_type = decl->get_orig_return_type();
     examineType(ret_type, out);
@@ -367,6 +381,20 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     }
     out << ")";
     out << endl;
+    out << "{" << endl;
+
+    SgBasicBlock* body = def->get_body();
+    SgStatementPtrList& stmt_list = body->get_statements();
+    SgStatementPtrList::const_iterator stmt_iter;
+
+    for (stmt_iter = stmt_list.begin();
+            stmt_iter != stmt_list.end();
+            stmt_iter++) {
+        SgStatement *stmt = *stmt_iter;
+        examineStatement(stmt, out);
+    }
+
+    out << "}" << endl;
  
     /*
   if (symbol) { // for some reason, some functions do not have symbols
