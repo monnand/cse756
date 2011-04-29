@@ -208,7 +208,8 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
 
             type = atype->get_base_type();
             ss1 << "[";
-            examineExpr(expr, ss1);
+            if (expr)
+                examineExpr(expr, ss1);
             ss1 << "]";
         } else {
             SgPointerType *ttype = isSgPointerType(type);
@@ -224,10 +225,25 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     out << symbol->get_name().getString();
     out << ss1.str();
 
+    SgInitializer *initer = name->get_initializer();
+    if (initer) {
+        switch (initer->variantT()) {
+            case V_SgAssignInitializer:
+                SgAssignInitializer *ai = isSgAssignInitializer(initer);
+                SgExpression *expr = ai->get_operand();
+                if (expr) {
+                    out << "=";
+                    examineExpr(expr, out);
+                }
+        }
+    }
 
     /* end of this decl */
     out << ";" << endl;
 
+
+
+    /*
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
     cout << ",type:"<<symbol->get_type()->class_name();
     cout << ",init:";
@@ -238,6 +254,7 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     else
       cout << "none";
     cout << ")" << endl;
+    */
   }
 }
 
