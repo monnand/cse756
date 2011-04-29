@@ -1,4 +1,6 @@
 #include <rose.h>
+#include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -18,7 +20,7 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   cout << "[Scope " << name << "] Num variable symbols: " << num_vars << endl;      
 }
 
-void examineVariableDeclaration(SgVariableDeclaration* decl) {
+void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
   SgInitializedNamePtrList& name_list = decl->get_variables();
   SgInitializedNamePtrList::const_iterator name_iter;
   for (name_iter = name_list.begin(); 
@@ -29,6 +31,9 @@ void examineVariableDeclaration(SgVariableDeclaration* decl) {
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
     cout << ",type:"<<symbol->get_type()->class_name();
     cout << ",init:";
+
+    out << symbol->get_type()->class_name();
+    out << " " << symbol->get_name.getString();
     SgInitializer* init_expr = name->get_initializer();
     if (init_expr) 
       cout << init_expr->class_name();
@@ -38,7 +43,7 @@ void examineVariableDeclaration(SgVariableDeclaration* decl) {
   }
 }
 
-void examineFunctionDeclaration(SgFunctionDeclaration* decl) {
+void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
   SgSymbol* symbol = decl->get_symbol_from_symbol_table();
   if (symbol) { // for some reason, some functions do not have symbols
     cout << "[Func] Function (name:"<<symbol->get_name().getString();
@@ -61,7 +66,7 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl) {
 string prettyPrint(SgProject* project) {
   SgFilePtrList& file_list = project->get_fileList();
   SgFilePtrList::const_iterator file_iter;
-  string ret;
+  stringstream rets;
   for (file_iter = file_list.begin(); 
        file_iter != file_list.end(); 
        file_iter++) {
@@ -81,11 +86,12 @@ string prettyPrint(SgProject* project) {
 	decl_iter++) {
       SgDeclarationStatement* decl = *decl_iter;
       if (isSgFunctionDeclaration(decl)) 
-	examineFunctionDeclaration(isSgFunctionDeclaration(decl));
+	examineFunctionDeclaration(isSgFunctionDeclaration(decl), rets);
       if (isSgVariableDeclaration(decl)) 
-	examineVariableDeclaration(isSgVariableDeclaration(decl));
+	examineVariableDeclaration(isSgVariableDeclaration(decl), rets);
     }
   }
+  return rets.str();
   return "\nnot implemented yet!\n";
 }
 
