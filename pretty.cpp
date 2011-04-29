@@ -8,6 +8,7 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   SgSymbolTable* symbol_table = scope->get_symbol_table();
   set<SgNode*> symbol_nodes = symbol_table->get_symbols();
   set<SgNode*>::const_iterator symbol_iter;
+  /*
   int num_vars = 0;
   for (symbol_iter = symbol_nodes.begin(); 
        symbol_iter != symbol_nodes.end(); 
@@ -18,6 +19,7 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   }
   cout << "[Scope " << name << "] Num symbols: " << symbol_nodes.size() << endl;      
   cout << "[Scope " << name << "] Num variable symbols: " << num_vars << endl;      
+  */
 }
 
 void getOperatorSym(SgBinaryOp *binop, ostream &out) {
@@ -235,6 +237,9 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
                     out << "=";
                     examineExpr(expr, out);
                 }
+                break;
+            default:
+                break;
         }
     }
 
@@ -260,6 +265,7 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
 
 void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
   SgSymbol* symbol = decl->get_symbol_from_symbol_table();
+  /*
   if (symbol) { // for some reason, some functions do not have symbols
     cout << "[Func] Function (name:"<<symbol->get_name().getString();
     cout << ",type:"<<symbol->get_type()->class_name() << ")" << endl;
@@ -276,6 +282,7 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
   } else {
     cout << "[Func] - no body" << endl;
   }
+  */
 }
 
 string prettyPrint(SgProject* project) {
