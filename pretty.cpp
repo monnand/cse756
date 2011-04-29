@@ -1,8 +1,5 @@
 #include <rose.h>
 
-#define DEBUG_ERROR
-#define DEBUG_TRACE
-#include <error.h>
 using namespace std;
 
 void examineScopeStatement(SgScopeStatement* scope, string name) {
@@ -70,7 +67,6 @@ string prettyPrint(SgProject* project) {
        file_iter++) {
     SgSourceFile* file = isSgSourceFile(*file_iter);
     // cout << "[Print] File: " << file->getFileName() << endl;
-    TRACE(("[File] %s", file->getFileName()));
 
     // print the symbol table at the global scope; SgGlobal is a
     // subclass of SgScopeStatement
