@@ -29,10 +29,10 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     SgInitializedName* name = *name_iter;
     SgSymbol* symbol = name->get_symbol_from_symbol_table();
     SgType *type = symbol->get_type();
-    SgArrayType *atype;
 
-    if (typeid(type) == typeid(atype)) {
-        out << "ArrayType" << endl;
+    if (type->class_name() == "SgArrayType") {
+        SgArrayType *atype = static_cast<SgArrayType *>(type);
+        out << "ArrayType" << atype->get_base_type->class_name()<< endl;
     }
 
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
