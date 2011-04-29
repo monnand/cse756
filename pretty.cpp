@@ -20,6 +20,11 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   cout << "[Scope " << name << "] Num variable symbols: " << num_vars << endl;      
 }
 
+void examineBinaryOp(SgBinaryOp *binop, ostream &out) {
+    out << "??";
+    return;
+}
+
 void examineExpr(SgExpression *expr, ostream &out) {
     stringstream ss1;
     stringstream ss2;
@@ -27,13 +32,14 @@ void examineExpr(SgExpression *expr, ostream &out) {
     SgExpression *e1;
     SgExpression *e2;
     switch(expr->variantT()) {
-        case V_SgAddOp:
-            SgAddOp *addop = isSgAddOp(expr);
+        case V_SgBinaryOp:
+            SgBinaryOp binop = isSgBinaryOp(expr);
             e1 = addop->get_lhs_operand();
             examineExpr(e1, ss1);
             e2 = addop->get_rhs_operand();
             examineExpr(e2, ss2);
-            out << ss1.str() << "+" << ss2.str();
+            examineBinaryOp(expr, ss3);
+            out << ss1.str() << ss3.str() << ss2.str();
             break;
         case V_SgIntVal:
             SgIntVal *intval = isSgIntVal(expr);
