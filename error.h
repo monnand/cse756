@@ -24,7 +24,7 @@ typedef enum debug_level_e {
 */
 #ifdef DEBUG_ERROR
 #define ERROR(msg)	do {	\
-	fprintf(stderr, "\tERROR %s(%s):%d\n", __FILE__, __func__, __LINE__);	\
+	fprintf(stderr, "[ERROR] %s(%s):%d\n", __FILE__, __func__, __LINE__);	\
 	err_quit msg;	\
 } while(0)
 #else
@@ -36,7 +36,7 @@ typedef enum debug_level_e {
 */
 #ifdef DEBUG_TRACE
 #define TRACE(msg)	do {	\
-	fprintf(stderr, "\tTRACE %s(%s):%d\n", __FILE__, __func__, __LINE__);	\
+	fprintf(stderr, "[TRACE][%s(%s):%d] ", __FILE__, __func__, __LINE__);	\
 	err_ret msg;	\
 } while (0)
 #else
