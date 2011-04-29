@@ -21,7 +21,7 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   cout << "[Scope " << name << "] Num variable symbols: " << num_vars << endl;      
   */
 }
-
+/*
 void getOperatorSym(SgBinaryOp *binop, ostream &out) {
     switch(binop->variantT()) {
         case V_SgEqualityOp:
@@ -129,6 +129,7 @@ void getOperatorSym(SgBinaryOp *binop, ostream &out) {
     out << "??";
     return;
 }
+*/
 
 void examineExpr(SgExpression *expr, ostream &out) {
     stringstream ss1;
@@ -136,16 +137,340 @@ void examineExpr(SgExpression *expr, ostream &out) {
     stringstream ss3;
     SgExpression *e1;
     SgExpression *e2;
+    SgBinaryOp *binop;
     switch(expr->variantT()) {
-        case V_SgBinaryOp:
-            SgBinaryOp *binop = isSgBinaryOp(expr);
+        /* Begin BinaryOp */
+        case V_SgEqualityOp:
+            binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
-            examineExpr(e1, ss1);
             e2 = binop->get_rhs_operand();
-            examineExpr(e2, ss2);
-            getOperatorSym(binop, ss3);
-            out << ss1.str() << ss3.str() << ss2.str();
+            out << "(";
+            examineExpr(e1, out);
+            out << "==";
+            examineExpr(e2, out);
+            out << ")";
             break;
+        case V_SgLessThanOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "<";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgGreaterThanOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << ">";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgNotEqualOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "!=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgLessOrEqualOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "<=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgGreaterOrEqualOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << ">=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgAddOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "+";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgSubtractOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "-";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgMultiplyOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "*";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgDivideOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "/";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgIntegerDivideOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "/";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgModOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "%";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgAndOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "&&";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgOrOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "||";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgBitXorOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "^";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgBitAndOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "&";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgBitOrOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "|";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgCommaOpExp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << ",";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgLshiftOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "<<";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgRshiftOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << ">>";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgPlusAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "+=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgMinusAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "-=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgAndAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "&=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgIorAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "|=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgMultAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "*=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgDivAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "/=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgModAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "%=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgXorAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "^=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgLshiftAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "<<=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgRshiftAssignOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << ">>=";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgExponentiationOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "ExpUnknown";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        case V_SgConcatenationOp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            out << "(";
+            examineExpr(e1, out);
+            out << "CatUnknown";
+            examineExpr(e2, out);
+            out << ")";
+            break;
+        /* End BinaryOp */
         case V_SgVarRefExp:
             SgVarRefExp *varref = isSgVarRefExp(expr);
             if (NULL == varref)
@@ -172,7 +497,7 @@ void examineExpr(SgExpression *expr, ostream &out) {
             out << ulongval->get_value() << "UL";
             break;
         default:
-            cerr << "UNKNOWN EXPR: " << expr->unparseToString() << endl;
+            cerr << "UNKNOWN EXPR[" << expr->class_name() << "] " << expr->unparseToString() << endl;
             break;
     }
     return;
@@ -289,7 +614,6 @@ void examineStatement(SgStatement *stmt, ostream &out) {
     switch(stmt->variantT()) {
         case V_SgExprStatement:
             SgExprStatement *expr_stmt = isSgExprStatement(stmt);
-            cerr << "expr stmt: " <<  expr_stmt->unparseToString() << endl;
             examineExpr(expr_stmt->get_expression(), out);
             out << ";";
             break;
