@@ -225,6 +225,55 @@ void examineType(SgType *type, ostream &out) {
     out << ss1.str();
 }
 
+void examineInitializedName(SgInitializedName *name, ostream &out) {
+    SgSymbol* symbol = name->get_symbol_from_symbol_table();
+    if (NULL == symbol)
+        return;
+    SgType *type = symbol->get_type();
+    int nr_stars = 0;
+    stringstream ss1;
+    
+    while (isSgArrayType(type) ||
+            isSgPointerType(type)) {
+        if (isSgArrayType(type)) {
+            SgArrayType *atype = isSgArrayType(type);
+            SgExpression *expr = atype->get_index();
+
+            type = atype->get_base_type();
+            ss1 << "[";
+            if (expr)
+                examineExpr(expr, ss1);
+            ss1 << "]";
+        } else {
+            SgPointerType *ttype = isSgPointerType(type);
+            type = ttype->get_base_type();
+            nr_stars++;
+        }
+    }
+    examinePrimTypeName(type, out);
+    out << " ";
+    for (int i = 0; i < nr_stars; ++i)
+        out << "*";
+    out << symbol->get_name().getString();
+    out << ss1.str();
+
+    SgInitializer *initer = name->get_initializer();
+    if (initer) {
+        switch (initer->variantT()) {
+            case V_SgAssignInitializer:
+                SgAssignInitializer *ai = isSgAssignInitializer(initer);
+                SgExpression *expr = ai->get_operand();
+                if (expr) {
+                    out << "=";
+                    examineExpr(expr, out);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
   SgInitializedNamePtrList& name_list = decl->get_variables();
   SgInitializedNamePtrList::const_iterator name_iter;
@@ -304,6 +353,19 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     examineType(ret_type, out);
 
     out << " " << symbol->get_name().getString();
+    out << "(";
+
+    SgInitializedNamePtrList& name_list = decl->get_args();
+    SgInitializedNamePtrList::const_iterator name_iter;
+    for (name_iter = name_list.begin(); 
+            name_iter != name_list.end(); 
+            name_iter++) {
+        if (name_iter != name_list.begin())
+            out << ", ";
+        SgInitializedName* name = *name_iter;
+        examineInitializedName(name, out);
+    }
+    out << ")";
     out << endl;
  
     /*
