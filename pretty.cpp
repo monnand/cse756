@@ -28,11 +28,16 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
        name_iter++) {
     SgInitializedName* name = *name_iter;
     SgSymbol* symbol = name->get_symbol_from_symbol_table();
+    SgType *type = symbol->get_type();
+
+    if (type->get_isCoArray()) {
+        out << "CoArray " << symbol->get_type()->class_name() << endl;
+    }
+
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
     cout << ",type:"<<symbol->get_type()->class_name();
     cout << ",init:";
 
-    out << symbol->get_type()->class_name() << endl;
     SgInitializer* init_expr = name->get_initializer();
     if (init_expr) 
       cout << init_expr->class_name();
@@ -91,6 +96,5 @@ string prettyPrint(SgProject* project) {
     }
   }
   return rets.str();
-  return "\nnot implemented yet!\n";
 }
 
