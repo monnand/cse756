@@ -32,7 +32,7 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
 
     if (type->class_name() == "SgArrayType") {
         SgArrayType *atype = static_cast<SgArrayType *>(type);
-        out << "ArrayType" << atype->get_base_type->class_name()<< endl;
+        out << "ArrayType" << atype->get_base_type()->class_name()<< endl;
     }
 
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
