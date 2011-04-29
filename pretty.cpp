@@ -20,7 +20,110 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   cout << "[Scope " << name << "] Num variable symbols: " << num_vars << endl;      
 }
 
-void examineBinaryOp(SgBinaryOp *binop, ostream &out) {
+void getOperatorSym(SgBinaryOp *binop, ostream &out) {
+    switch(binop->variantT()) {
+        case V_SgEqualityOp:
+            out << "==";
+            break;
+        case V_SgLessThanOp:
+            out << "<";
+            break;
+        case V_SgGreaterThanOp:
+            out << ">";
+            break;
+        case V_SgNotEqualOp:
+            out << "!=";
+            break;
+        case V_SgLessOrEqualOp:
+            out << "<=";
+            break;
+        case V_SgGreaterOrEqualOp:
+            out << ">=";
+            break;
+        case V_SgAddOp:
+            out << "+";
+            break;
+        case V_SgSubtractOp:
+            out << "-";
+            break;
+        case V_SgMultiplyOp:
+            out << "*";
+            break;
+        case V_SgDivideOp:
+            out << "/";
+            break;
+        case V_SgIntegerDivideOp:
+            out << "/";
+            break;
+        case V_SgModOp:
+            out << "%";
+            break;
+        case V_SgAndOp:
+            out << "&&";
+            break;
+        case V_SgOrOp:
+            out << "||";
+            break;
+        case V_SgBitXorOp:
+            out << "^";
+            break;
+        case V_SgBitAndOp:
+            out << "&";
+            break;
+        case V_SgBitOrOp:
+            out << "|";
+            break;
+        case V_SgCommaOpExp:
+            out << ",";
+            break;
+        case V_SgLshiftOp:
+            out << "<<";
+            break;
+        case V_SgRshiftOp:
+            out << ">>";
+            break;
+        case V_SgAssignOp:
+            out << "=";
+            break;
+        case V_SgPlusAssignOp:
+            out << "+=";
+            break;
+        case V_SgMinusAssignOp:
+            out << "-=";
+            break;
+        case V_SgAndAssignOp:
+            out << "&=";
+            break;
+        case V_SgIorAssignOp:
+            out << "|=";
+            break;
+        case V_SgMultAssignOp:
+            out << "*=";
+            break;
+        case V_SgDivAssignOp:
+            out << "/=";
+            break;
+        case V_SgModAssignOp:
+            out << "%=";
+            break;
+        case V_SgXorAssignOp:
+            out << "^=";
+            break;
+        case V_SgLshiftAssignOp:
+            out << "<<=";
+            break;
+        case V_SgRshiftAssignOp:
+            out << ">>=";
+            break;
+        case V_SgExponentiationOp:
+            out << "ExpUnknown";
+            break;
+        case V_SgConcatenationOp:
+            out << "CatUnknown";
+            break;
+        default:
+            break;
+    }
     out << "??";
     return;
 }
@@ -33,12 +136,12 @@ void examineExpr(SgExpression *expr, ostream &out) {
     SgExpression *e2;
     switch(expr->variantT()) {
         case V_SgBinaryOp:
-            SgBinaryOp binop = isSgBinaryOp(expr);
-            e1 = addop->get_lhs_operand();
+            SgBinaryOp *binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
             examineExpr(e1, ss1);
-            e2 = addop->get_rhs_operand();
+            e2 = binop->get_rhs_operand();
             examineExpr(e2, ss2);
-            examineBinaryOp(expr, ss3);
+            getOperatorSym(binop, ss3);
             out << ss1.str() << ss3.str() << ss2.str();
             break;
         case V_SgIntVal:
