@@ -30,7 +30,7 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     SgSymbol* symbol = name->get_symbol_from_symbol_table();
     SgType *type = symbol->get_type();
 
-    if (type->get_isCoArray()) {
+    if (type->class_name() == "SgArrayType") {
         out << "CoArray " << symbol->get_type()->class_name() << endl;
     }
 
