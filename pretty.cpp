@@ -146,6 +146,15 @@ void examineExpr(SgExpression *expr, ostream &out) {
             getOperatorSym(binop, ss3);
             out << ss1.str() << ss3.str() << ss2.str();
             break;
+        case V_SgVarRefExp:
+            SgVarRefExp *varref = isSgVarRefExp(expr);
+            if (NULL == varref)
+                return;
+            SgVariableSymbol *svsym = varref->get_symbol();
+            if (NULL == svsym)
+                return;
+            out << svsym->get_name().getString();
+            break;
         case V_SgIntVal:
             SgIntVal *intval = isSgIntVal(expr);
             out << intval->get_value();
@@ -279,7 +288,9 @@ void examineStatement(SgStatement *stmt, ostream &out) {
         return;
     switch(stmt->variantT()) {
         case V_SgExprStatement:
-            examineExpr(stmt->get_expression(), out);
+            SgExprStatement *expr_stmt = isSgExprStatement(stmt);
+            cerr << "expr stmt: " <<  expr_stmt->unparseToString() << endl;
+            examineExpr(expr_stmt->get_expression(), out);
             out << ";";
             break;
     }
@@ -392,6 +403,7 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
             stmt_iter++) {
         SgStatement *stmt = *stmt_iter;
         examineStatement(stmt, out);
+        out << endl;
     }
 
     out << "}" << endl;
