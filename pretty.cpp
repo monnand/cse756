@@ -138,7 +138,73 @@ void examineExpr(SgExpression *expr, ostream &out) {
     SgExpression *e1;
     SgExpression *e2;
     SgBinaryOp *binop;
+    SgUnaryOp *unaryop;
     switch(expr->variantT()) {
+        /* Begin UnaryOp */
+        case V_SgMinusOp:
+             out << "(-";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgUnaryAddOp:
+             out << "(+";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgNotOp:
+             out << "(!";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgPointerDerefExp:
+             out << "(*";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgAddressOfOp:
+             out << "(&";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgMinusMinusOp:
+             out << "(--";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgPlusPlusOp:
+             out << "(++";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgBitComplementOp:
+             out << "(~";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        case V_SgCastExp:
+             out << "(cast";
+            unaryop = isSgUnaryOp(expr);
+            e1 = unaryop->get_operand();
+            examineExpr(e1, out);
+            out << ")";
+             break;
+        /* End UnaryOp */
         /* Begin BinaryOp */
         case V_SgEqualityOp:
             binop = isSgBinaryOp(expr);
