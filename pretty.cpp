@@ -41,9 +41,42 @@ void examineExpr(SgExpression *expr, ostream &out) {
             break;
         case V_SgLongIntVal:
             SgLongIntVal *longval = isSgLongIntVal(expr);
-            out << longval->get_value();
+            out << longval->get_value() << "L";
+            break;
+        case V_SgUnsignedIntVal:
+            SgUnsignedIntVal *uintval = isSgUnsignedIntVal(expr);
+            out << uintval->get_value() << "U";
+            break;
+        case V_SgUnsignedLongVal:
+            SgUnsignedLongVal *ulongval = isSgUnsignedLongVal(expr);
+            out << ulongval->get_value() << "UL";
+            break;
+        default:
+            cerr << "UNKNOWN EXPR: " << expr->unparseToString() << endl;
             break;
     }
+    return;
+}
+
+void examinePrimTypeName(SgType *type, ostream &out) {
+    switch(type->variantT()) {
+        case V_SgTypeInt:
+            out << "int";
+            break;
+        case V_SgTypeLong:
+            out << "long";
+            break;
+        case V_SgTypeDouble:
+            out << "double";
+            break;
+        case V_SgTypeFloat:
+            out << "float";
+            break;
+        default:
+            out << "UNKNOWN TYPE!!!";
+            break;
+    }
+    return;
 }
 
 void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
@@ -75,7 +108,8 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
         }
     }
 
-    out << type->class_name() << " ";
+    examinePrimTypeName(type, out);
+    out << " ";
     for (int i = 0; i < nr_stars; ++i)
         out << "*";
     out << symbol->get_name().getString();
