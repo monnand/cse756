@@ -623,7 +623,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
         case V_SgVariableDeclaration:
             SgVariableDeclaration *vardecl = isSgVariableDeclaration(stmt);
             examineVariableDeclaration(vardecl, out);
-            return;
+            break;
         case V_SgReturnStmt:
             SgReturnStmt *retstmt = isSgReturnStmt(stmt);
             out << "return ";
@@ -657,11 +657,11 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             examineExpr(expr, out);
             out << ")" << endl;
             examineStatement(forstmt->get_loop_body(), out);
-            return;
+            break;
         case V_SgScopeStatement:
             SgScopeStatement *scope = isSgScopeStatement(stmt);
             examineScopeStatement(scope, "for loop", out);
-            return;
+            break;
         case V_SgIfStmt:
             SgIfStmt *ifstmt = isSgIfStmt(stmt);
             out << "if (";
@@ -677,7 +677,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
                 out << "else";
                 examineStatement(stmt, out);
             }
-            return;
+            break;
         case V_SgWhileStmt:
             SgWhileStmt *whilestmt = isSgWhileStmt(stmt);
             expr_stmt = isSgExprStatement(whilestmt->get_condition());
@@ -687,7 +687,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             out << ")" << endl;
             stmt = whilestmt->get_body();
             examineStatement(stmt, out);
-            return;
+            break;
     }
 }
 
