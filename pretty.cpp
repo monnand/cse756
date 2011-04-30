@@ -4,6 +4,40 @@
 
 using namespace std;
 
+void examineExpr(SgExpression *expr, ostream &out);
+void examinePrimTypeName(SgType *type, ostream &out);
+void examineType(SgType *type, ostream &out) {
+    int nr_stars = 0;
+    stringstream ss1;
+    if (NULL == type) {
+        out << "void";
+        return;
+    }
+    while (isSgArrayType(type) ||
+            isSgPointerType(type)) {
+        if (isSgArrayType(type)) {
+            SgArrayType *atype = isSgArrayType(type);
+            SgExpression *expr = atype->get_index();
+
+            type = atype->get_base_type();
+            ss1 << "[";
+            if (expr)
+                examineExpr(expr, ss1);
+            ss1 << "]";
+        } else {
+            SgPointerType *ttype = isSgPointerType(type);
+            type = ttype->get_base_type();
+            nr_stars++;
+        }
+    }
+
+    examinePrimTypeName(type, out);
+    out << " ";
+    for (int i = 0; i < nr_stars; ++i)
+        out << "*";
+    out << ss1.str();
+}
+
 void examineScopeStatement(SgScopeStatement* scope, string name) {
   SgSymbolTable* symbol_table = scope->get_symbol_table();
   set<SgNode*> symbol_nodes = symbol_table->get_symbols();
@@ -21,115 +55,6 @@ void examineScopeStatement(SgScopeStatement* scope, string name) {
   cout << "[Scope " << name << "] Num variable symbols: " << num_vars << endl;      
   */
 }
-/*
-void getOperatorSym(SgBinaryOp *binop, ostream &out) {
-    switch(binop->variantT()) {
-        case V_SgEqualityOp:
-            out << "==";
-            break;
-        case V_SgLessThanOp:
-            out << "<";
-            break;
-        case V_SgGreaterThanOp:
-            out << ">";
-            break;
-        case V_SgNotEqualOp:
-            out << "!=";
-            break;
-        case V_SgLessOrEqualOp:
-            out << "<=";
-            break;
-        case V_SgGreaterOrEqualOp:
-            out << ">=";
-            break;
-        case V_SgAddOp:
-            out << "+";
-            break;
-        case V_SgSubtractOp:
-            out << "-";
-            break;
-        case V_SgMultiplyOp:
-            out << "*";
-            break;
-        case V_SgDivideOp:
-            out << "/";
-            break;
-        case V_SgIntegerDivideOp:
-            out << "/";
-            break;
-        case V_SgModOp:
-            out << "%";
-            break;
-        case V_SgAndOp:
-            out << "&&";
-            break;
-        case V_SgOrOp:
-            out << "||";
-            break;
-        case V_SgBitXorOp:
-            out << "^";
-            break;
-        case V_SgBitAndOp:
-            out << "&";
-            break;
-        case V_SgBitOrOp:
-            out << "|";
-            break;
-        case V_SgCommaOpExp:
-            out << ",";
-            break;
-        case V_SgLshiftOp:
-            out << "<<";
-            break;
-        case V_SgRshiftOp:
-            out << ">>";
-            break;
-        case V_SgAssignOp:
-            out << "=";
-            break;
-        case V_SgPlusAssignOp:
-            out << "+=";
-            break;
-        case V_SgMinusAssignOp:
-            out << "-=";
-            break;
-        case V_SgAndAssignOp:
-            out << "&=";
-            break;
-        case V_SgIorAssignOp:
-            out << "|=";
-            break;
-        case V_SgMultAssignOp:
-            out << "*=";
-            break;
-        case V_SgDivAssignOp:
-            out << "/=";
-            break;
-        case V_SgModAssignOp:
-            out << "%=";
-            break;
-        case V_SgXorAssignOp:
-            out << "^=";
-            break;
-        case V_SgLshiftAssignOp:
-            out << "<<=";
-            break;
-        case V_SgRshiftAssignOp:
-            out << ">>=";
-            break;
-        case V_SgExponentiationOp:
-            out << "ExpUnknown";
-            break;
-        case V_SgConcatenationOp:
-            out << "CatUnknown";
-            break;
-        default:
-            break;
-    }
-    out << "??";
-    return;
-}
-*/
 
 void examineExpr(SgExpression *expr, ostream &out) {
     stringstream ss1;
@@ -139,6 +64,7 @@ void examineExpr(SgExpression *expr, ostream &out) {
     SgExpression *e2;
     SgBinaryOp *binop;
     SgUnaryOp *unaryop;
+    SgType *type;
     switch(expr->variantT()) {
         /* Begin UnaryOp */
         case V_SgMinusOp:
@@ -177,32 +103,38 @@ void examineExpr(SgExpression *expr, ostream &out) {
             out << ")";
              break;
         case V_SgMinusMinusOp:
-             out << "(--";
+            out << "(--";
             unaryop = isSgUnaryOp(expr);
             e1 = unaryop->get_operand();
             examineExpr(e1, out);
             out << ")";
              break;
         case V_SgPlusPlusOp:
-             out << "(++";
+             /* TODO we need to deal with ++/--i and i++/--
+              */
             unaryop = isSgUnaryOp(expr);
+            SgPlusPlusOp *ppop = isSgPlusPlusOp(expr);
+            
+            out << "(++";
             e1 = unaryop->get_operand();
             examineExpr(e1, out);
             out << ")";
              break;
         case V_SgBitComplementOp:
-             out << "(~";
+            out << "(~";
             unaryop = isSgUnaryOp(expr);
             e1 = unaryop->get_operand();
             examineExpr(e1, out);
             out << ")";
              break;
         case V_SgCastExp:
-             out << "(cast";
-            unaryop = isSgUnaryOp(expr);
-            e1 = unaryop->get_operand();
-            examineExpr(e1, out);
+            out << "(";
+            SgCastExp *castexp = isSgCastExp(expr);
+            e1 = castexp->get_operand();
+            type = castexp->get_type();
+            examineType(type, out);
             out << ")";
+            examineExpr(e1, out);
              break;
         /* End UnaryOp */
         /* Begin BinaryOp */
@@ -410,111 +342,89 @@ void examineExpr(SgExpression *expr, ostream &out) {
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgPlusAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "+=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgMinusAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "-=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgAndAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "&=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgIorAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "|=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgMultAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "*=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgDivAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "/=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgModAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "%=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgXorAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "^=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgLshiftAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << "<<=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgRshiftAssignOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
-            out << "(";
             examineExpr(e1, out);
             out << ">>=";
             examineExpr(e2, out);
-            out << ")";
             break;
         case V_SgExponentiationOp:
             binop = isSgBinaryOp(expr);
@@ -536,6 +446,15 @@ void examineExpr(SgExpression *expr, ostream &out) {
             examineExpr(e2, out);
             out << ")";
             break;
+        case V_SgPntrArrRefExp:
+            binop = isSgBinaryOp(expr);
+            e1 = binop->get_lhs_operand();
+            e2 = binop->get_rhs_operand();
+            examineExpr(e1, out);
+            out << "[";
+            examineExpr(e2, out);
+            out << "]";
+
         /* End BinaryOp */
         case V_SgVarRefExp:
             SgVarRefExp *varref = isSgVarRefExp(expr);
@@ -591,38 +510,6 @@ void examinePrimTypeName(SgType *type, ostream &out) {
             break;
     }
     return;
-}
-
-void examineType(SgType *type, ostream &out) {
-    int nr_stars = 0;
-    stringstream ss1;
-    if (NULL == type) {
-        out << "void";
-        return;
-    }
-    while (isSgArrayType(type) ||
-            isSgPointerType(type)) {
-        if (isSgArrayType(type)) {
-            SgArrayType *atype = isSgArrayType(type);
-            SgExpression *expr = atype->get_index();
-
-            type = atype->get_base_type();
-            ss1 << "[";
-            if (expr)
-                examineExpr(expr, ss1);
-            ss1 << "]";
-        } else {
-            SgPointerType *ttype = isSgPointerType(type);
-            type = ttype->get_base_type();
-            nr_stars++;
-        }
-    }
-
-    examinePrimTypeName(type, out);
-    out << " ";
-    for (int i = 0; i < nr_stars; ++i)
-        out << "*";
-    out << ss1.str();
 }
 
 void examineInitializedName(SgInitializedName *name, ostream &out) {
@@ -783,6 +670,8 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     out << ")";
     out << endl;
     out << "{" << endl;
+
+
 
     SgBasicBlock* body = def->get_body();
     SgStatementPtrList& stmt_list = body->get_statements();
