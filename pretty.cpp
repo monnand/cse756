@@ -663,7 +663,8 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             expr = forstmt->get_increment();
             examineExpr(expr, out);
             out << ")" << endl;
-            examineStatement(forstmt->get_loop_body(), out);
+            stmt = forstmt->get_loop_body();
+            examineStatement(stmt, out);
             break;
         }
         case V_SgScopeStatement:
@@ -685,7 +686,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             examineStatement(stmt, out);
             stmt = ifstmt->get_false_body();
             if (stmt) {
-                out << "else";
+                out << endl << "else" << endl;
                 examineStatement(stmt, out);
             }
             break;
