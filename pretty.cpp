@@ -636,6 +636,16 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             examineVariableDeclaration(vardecl, out);
             break;
         }
+        case V_SgBreakStmt:
+        {
+            out << "break;";
+            break;
+        }
+        case V_SgContinueStmt:
+        {
+            out << "continue;";
+            break;
+        }
         case V_SgReturnStmt:
         {
             SgReturnStmt *retstmt = isSgReturnStmt(stmt);
