@@ -616,15 +616,20 @@ void examineStatement(SgStatement *stmt, ostream &out) {
         return;
     switch(stmt->variantT()) {
         case V_SgExprStatement:
+        {
             expr_stmt = isSgExprStatement(stmt);
             examineExpr(expr_stmt->get_expression(), out);
             out << ";";
             break;
+        }
         case V_SgVariableDeclaration:
+        {
             SgVariableDeclaration *vardecl = isSgVariableDeclaration(stmt);
             examineVariableDeclaration(vardecl, out);
             break;
+        }
         case V_SgReturnStmt:
+        {
             SgReturnStmt *retstmt = isSgReturnStmt(stmt);
             out << "return ";
             expr = retstmt->get_expression();
@@ -633,7 +638,9 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             }
             out << ";";
             break;
+        }
         case V_SgForStatement:
+        {
             out << "for (";
             SgForStatement *forstmt = isSgForStatement(stmt);
             SgStatementPtrList &init_stmt_list = forstmt->get_init_stmt();
@@ -658,11 +665,15 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             out << ")" << endl;
             examineStatement(forstmt->get_loop_body(), out);
             break;
+        }
         case V_SgScopeStatement:
+        {
             SgScopeStatement *scope = isSgScopeStatement(stmt);
             examineScopeStatement(scope, "for loop", out);
             break;
-        case V_SgIfStmt:
+        }
+        case V_SgIfStmt: 
+        {
             SgIfStmt *ifstmt = isSgIfStmt(stmt);
             out << "if (";
             stmt = ifstmt->get_conditional();
@@ -678,7 +689,9 @@ void examineStatement(SgStatement *stmt, ostream &out) {
                 examineStatement(stmt, out);
             }
             break;
+        }
         case V_SgWhileStmt:
+        {
             SgWhileStmt *whilestmt = isSgWhileStmt(stmt);
             expr_stmt = isSgExprStatement(whilestmt->get_condition());
             out << "while (";
@@ -688,6 +701,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             stmt = whilestmt->get_body();
             examineStatement(stmt, out);
             break;
+        }
     }
 }
 
