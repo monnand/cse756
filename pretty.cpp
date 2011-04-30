@@ -610,19 +610,19 @@ void examineInitializedName(SgInitializedName *name, ostream &out) {
 
 void examineStatement(SgStatement *stmt, ostream &out) {
     SgExpression *expr;
+    SgExprStatement *expr_stmt;
     int i;
     if (NULL == stmt)
         return;
     switch(stmt->variantT()) {
         case V_SgExprStatement:
-            SgExprStatement *expr_stmt = isSgExprStatement(stmt);
+            expr_stmt = isSgExprStatement(stmt);
             examineExpr(expr_stmt->get_expression(), out);
-            out << ";";
             break;
         case V_SgVariableDeclaration:
             SgVariableDeclaration *vardecl = isSgVariableDeclaration(stmt);
             examineVariableDeclaration(vardecl, out);
-            break;
+            return;
         case V_SgReturnStmt:
             SgReturnStmt *retstmt = isSgReturnStmt(stmt);
             out << "return ";
@@ -630,28 +630,34 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             if (expr) {
                 examineExpr(expr, out);
             }
-            out << ";";
             break;
         case V_SgForStatement:
+            out << "for (";
             SgForStatement *forstmt = isSgForStatement(stmt);
-            SgForInitStatement *
             SgStatementPtrList &init_stmt_list = forstmt->get_init_stmt();
             SgStatementPtrList::const_iterator init_stmt_iter;
-            out << "for (";
-            i = 0;
             for (init_stmt_iter = init_stmt_list.begin();
                     init_stmt_list != init_stmt_list.end();
                     ++init_stmt_list) {
                 stmt = *init_stmt_iter;
                 if (init_stmt_iter != init_stmt_list.begin())
                     out << ", ";
-                examineStatement(stmt, out);
-                ++i;
+                expr_stmt = isSgExprStatement(stmt);
+                if (expr_stmt)
+                    examineExpr(expr_stmt->get_expression(), out);
             }
-            if (!i)
-                out << "; ";
-            expr =
+            out << "; ";
+            expr_stmt = isSgExprStatement(for_stmt->get_test());
+            if (expr_stmt)
+                examineExpr(expr_stmt->get_expression(), out);
+            out << "; ";
+            expr = for_stmt->get_increment();
+            examineExpr(expor, out);
+            out << ")" << endl;
+            examineStatement(for_stmt->get_loop_body(), out);
+            break;
     }
+    out << ";";
     out << "/* " << stmt->class_name() << "*/";
 }
 
