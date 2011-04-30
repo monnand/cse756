@@ -526,6 +526,14 @@ void examineExpr(SgExpression *expr, ostream &out) {
             SgUnsignedLongVal *ulongval = isSgUnsignedLongVal(expr);
             out << ulongval->get_value() << "UL";
             break;
+        case V_SgDoubleVal:
+            SgDoubleVal *doubleval = isSgDoubleVal(expr);
+            out << doubleval->get_value();
+            break;
+        case V_SgFloatVal:
+            SgFloatVal *floatval = isSgFloatVal(expr);
+            out << floatval->get_value() << "F";
+            break;
         default:
             cerr << "UNKNOWN EXPR[" << expr->class_name() << "] " << expr->unparseToString() << endl;
             break;
