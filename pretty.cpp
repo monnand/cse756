@@ -6,6 +6,9 @@ using namespace std;
 
 void examineExpr(SgExpression *expr, ostream &out);
 void examinePrimTypeName(SgType *type, ostream &out);
+void examineStatement(SgStatement *stmt, ostream &out);
+void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out);
+
 void examineType(SgType *type, ostream &out) {
     int nr_stars = 0;
     stringstream ss1;
@@ -38,10 +41,48 @@ void examineType(SgType *type, ostream &out) {
     out << ss1.str();
 }
 
-void examineScopeStatement(SgScopeStatement* scope, string name) {
-  SgSymbolTable* symbol_table = scope->get_symbol_table();
-  set<SgNode*> symbol_nodes = symbol_table->get_symbols();
-  set<SgNode*>::const_iterator symbol_iter;
+void examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
+    SgSymbolTable* symbol_table = scope->get_symbol_table();
+    set<SgNode*> symbol_nodes = symbol_table->get_symbols();
+    set<SgNode*>::const_iterator symbol_iter;
+
+    out << "{" << endl;
+    /*
+    for (symbol_iter = symbol_nodes.begin(); 
+        symbol_iter != symbol_nodes.end(); 
+        ++symbol_iter) {
+        SgSymbol* symbol = isSgSymbol(*symbol_iter);
+        if (isSgVariableSymbol(symbol)) {
+            SgVariableSymbol *varsym = isSgVariableSymbol(symbol);
+            SgInitializedName *initname = varsym->get_declaration();
+            SgDeclarationStatement *decl = initname->get_declaration();
+            if (isSgVariableDeclaration(decl)) {
+                SgVariableDeclaration *vardecl = isSgVariableDeclaration(decl);
+                examineVariableDeclaration(vardecl, out);
+            }
+        }
+    }
+    */
+
+    SgBasicBlock *body;
+    if (scope->variantT() != V_SgBasicBlock) {
+        out << "}" << endl;
+        return;
+    } else
+        body = isSgBasicBlock(scope);
+
+    SgStatementPtrList& stmt_list = body->get_statements();
+    SgStatementPtrList::const_iterator stmt_iter;
+
+    for (stmt_iter = stmt_list.begin();
+            stmt_iter != stmt_list.end();
+            stmt_iter++) {
+        SgStatement *stmt = *stmt_iter;
+        examineStatement(stmt, out);
+        out << endl;
+    }
+
+    out << "}" << endl;
   /*
   int num_vars = 0;
   for (symbol_iter = symbol_nodes.begin(); 
@@ -465,6 +506,10 @@ void examineExpr(SgExpression *expr, ostream &out) {
                 return;
             out << svsym->get_name().getString();
             break;
+        case V_SgLabelRefExp:
+            SgLabelRefExp *labref = isSgLabelRefExp(expr);
+            out << labref->get_name().getString();
+            break;
         case V_SgIntVal:
             SgIntVal *intval = isSgIntVal(expr);
             out << intval->get_value();
@@ -561,7 +606,9 @@ void examineInitializedName(SgInitializedName *name, ostream &out) {
     }
 }
 
+
 void examineStatement(SgStatement *stmt, ostream &out) {
+    SgExpression *expr;
     if (NULL == stmt)
         return;
     switch(stmt->variantT()) {
@@ -570,7 +617,21 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             examineExpr(expr_stmt->get_expression(), out);
             out << ";";
             break;
+        case V_SgVariableDeclaration:
+            SgVariableDeclaration *vardecl = isSgVariableDeclaration(stmt);
+            examineVariableDeclaration(vardecl, out);
+            break;
+        case V_SgReturnStmt:
+            SgReturnStmt *retstmt = isSgReturnStmt(stmt);
+            out << "return ";
+            expr = retstmt->get_expression();
+            if (expr) {
+                examineExpr(expr, out);
+            }
+            out << ";";
+            break;
     }
+    out << "/* " << stmt->class_name() << "*/";
 }
 
 void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
@@ -627,7 +688,7 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     }
 
     /* end of this decl */
-    out << ";" << endl;
+    out << ";";
 
     /*
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
@@ -669,42 +730,9 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     }
     out << ")";
     out << endl;
-    out << "{" << endl;
-
-
 
     SgBasicBlock* body = def->get_body();
-    SgStatementPtrList& stmt_list = body->get_statements();
-    SgStatementPtrList::const_iterator stmt_iter;
-
-    for (stmt_iter = stmt_list.begin();
-            stmt_iter != stmt_list.end();
-            stmt_iter++) {
-        SgStatement *stmt = *stmt_iter;
-        examineStatement(stmt, out);
-        out << endl;
-    }
-
-    out << "}" << endl;
- 
-    /*
-  if (symbol) { // for some reason, some functions do not have symbols
-    cout << "[Func] Function (name:"<<symbol->get_name().getString();
-    cout << ",type:"<<symbol->get_type()->class_name() << ")" << endl;
-  } else {
-    cout << "[Func] Function (no name)" << endl;
-  }
-  SgFunctionDefinition* def = decl->get_definition();
-  if (def) {
-    SgBasicBlock* body = def->get_body();
-    SgStatementPtrList& stmt_list = body->get_statements();
-    cout << "[Func] - " << stmt_list.size() << " statements" << endl;
-    // An SgBasicBlock is a subclass of SgScopeStatement
-    examineScopeStatement(body,symbol->get_name().getString());
-  } else {
-    cout << "[Func] - no body" << endl;
-  }
-  */
+    examineScopeStatement(body,symbol->get_name().getString(), out);
 }
 
 string prettyPrint(SgProject* project) {
@@ -720,7 +748,9 @@ string prettyPrint(SgProject* project) {
     // print the symbol table at the global scope; SgGlobal is a
     // subclass of SgScopeStatement
     SgGlobal* global_scope = file->get_globalScope(); 
+    /*
     examineScopeStatement(global_scope,"global");
+    */
 
     // get the actual statements that are in this global scope
     SgDeclarationStatementPtrList& decl_list = global_scope->get_declarations();
@@ -731,8 +761,10 @@ string prettyPrint(SgProject* project) {
       SgDeclarationStatement* decl = *decl_iter;
       if (isSgFunctionDeclaration(decl)) 
 	examineFunctionDeclaration(isSgFunctionDeclaration(decl), rets);
-      if (isSgVariableDeclaration(decl)) 
+      if (isSgVariableDeclaration(decl)) {
 	examineVariableDeclaration(isSgVariableDeclaration(decl), rets);
+            rets << endl;
+        }
     }
   }
   return rets.str();
