@@ -638,7 +638,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             SgStatementPtrList::const_iterator init_stmt_iter;
             for (init_stmt_iter = init_stmt_list.begin();
                     init_stmt_list != init_stmt_list.end();
-                    ++init_stmt_list) {
+                    init_stmt_list++) {
                 stmt = *init_stmt_iter;
                 if (init_stmt_iter != init_stmt_list.begin())
                     out << ", ";
@@ -647,14 +647,14 @@ void examineStatement(SgStatement *stmt, ostream &out) {
                     examineExpr(expr_stmt->get_expression(), out);
             }
             out << "; ";
-            expr_stmt = isSgExprStatement(for_stmt->get_test());
+            expr_stmt = isSgExprStatement(forstmt->get_test());
             if (expr_stmt)
                 examineExpr(expr_stmt->get_expression(), out);
             out << "; ";
             expr = for_stmt->get_increment();
-            examineExpr(expor, out);
+            examineExpr(expr, out);
             out << ")" << endl;
-            examineStatement(for_stmt->get_loop_body(), out);
+            examineStatement(forstmt->get_loop_body(), out);
             break;
     }
     out << ";";
