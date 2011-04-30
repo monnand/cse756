@@ -613,7 +613,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
     int i;
     if (NULL == stmt)
         return;
-    out << "/* " << stmt->unparseToString() << " */" << endl;
+    //out << "/* " << stmt->unparseToString() << " */" << endl;
     switch(stmt->variantT()) {
         case V_SgExprStatement:
         {
@@ -667,10 +667,10 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             examineStatement(stmt, out);
             break;
         }
-        case V_SgScopeStatement:
+        case V_SgBasicBlock:
         {
             SgScopeStatement *scope = isSgScopeStatement(stmt);
-            examineScopeStatement(scope, "for loop", out);
+            examineScopeStatement(scope, "scope", out);
             break;
         }
         case V_SgIfStmt: 
