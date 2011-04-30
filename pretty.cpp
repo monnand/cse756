@@ -78,7 +78,6 @@ void examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
             stmt_iter != stmt_list.end();
             stmt_iter++) {
         SgStatement *stmt = *stmt_iter;
-        out << "/* " << stmt->unparseToString() << " */" << endl;
         examineStatement(stmt, out);
         out << endl;
     }
@@ -614,6 +613,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
     int i;
     if (NULL == stmt)
         return;
+    out << "/* " << stmt->unparseToString() << " */" << endl;
     switch(stmt->variantT()) {
         case V_SgExprStatement:
         {
