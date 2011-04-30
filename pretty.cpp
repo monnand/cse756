@@ -144,23 +144,33 @@ void examineExpr(SgExpression *expr, ostream &out) {
             out << ")";
              break;
         case V_SgMinusMinusOp:
-            out << "(--";
-            unaryop = isSgUnaryOp(expr);
-            e1 = unaryop->get_operand();
-            examineExpr(e1, out);
-            out << ")";
-             break;
+            if (unaryop->get_mode()) {
+                out << "(";
+                e1 = unaryop->get_operand();
+                examineExpr(e1, out);
+                out << "--)";
+            } else {
+                out << "(--";
+                e1 = unaryop->get_operand();
+                examineExpr(e1, out);
+                out << ")";
+            }
+            break;
         case V_SgPlusPlusOp:
-             /* TODO we need to deal with ++/--i and i++/--
-              */
             unaryop = isSgUnaryOp(expr);
             SgPlusPlusOp *ppop = isSgPlusPlusOp(expr);
-            
-            out << "(++";
-            e1 = unaryop->get_operand();
-            examineExpr(e1, out);
-            out << ")";
-             break;
+            if (unaryop->get_mode()) {
+                out << "(";
+                e1 = unaryop->get_operand();
+                examineExpr(e1, out);
+                out << "++)";
+            } else {
+                out << "(++";
+                e1 = unaryop->get_operand();
+                examineExpr(e1, out);
+                out << ")";
+            }
+            break;
         case V_SgBitComplementOp:
             out << "(~";
             unaryop = isSgUnaryOp(expr);
