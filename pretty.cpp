@@ -78,6 +78,7 @@ void examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
             stmt_iter != stmt_list.end();
             stmt_iter++) {
         SgStatement *stmt = *stmt_iter;
+        out << "/* " << stmt->unparseToString() << " */" << endl;
         examineStatement(stmt, out);
         out << endl;
     }
@@ -609,6 +610,7 @@ void examineInitializedName(SgInitializedName *name, ostream &out) {
 
 void examineStatement(SgStatement *stmt, ostream &out) {
     SgExpression *expr;
+    int i;
     if (NULL == stmt)
         return;
     switch(stmt->variantT()) {
@@ -630,6 +632,25 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             }
             out << ";";
             break;
+        case V_SgForStatement:
+            SgForStatement *forstmt = isSgForStatement(stmt);
+            SgForInitStatement *
+            SgStatementPtrList &init_stmt_list = forstmt->get_init_stmt();
+            SgStatementPtrList::const_iterator init_stmt_iter;
+            out << "for (";
+            i = 0;
+            for (init_stmt_iter = init_stmt_list.begin();
+                    init_stmt_list != init_stmt_list.end();
+                    ++init_stmt_list) {
+                stmt = *init_stmt_iter;
+                if (init_stmt_iter != init_stmt_list.begin())
+                    out << ", ";
+                examineStatement(stmt, out);
+                ++i;
+            }
+            if (!i)
+                out << "; ";
+            expr =
     }
     out << "/* " << stmt->class_name() << "*/";
 }
