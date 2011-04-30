@@ -618,6 +618,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
         case V_SgExprStatement:
             expr_stmt = isSgExprStatement(stmt);
             examineExpr(expr_stmt->get_expression(), out);
+            out << ";";
             break;
         case V_SgVariableDeclaration:
             SgVariableDeclaration *vardecl = isSgVariableDeclaration(stmt);
@@ -630,6 +631,7 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             if (expr) {
                 examineExpr(expr, out);
             }
+            out << ";";
             break;
         case V_SgForStatement:
             out << "for (";
@@ -637,8 +639,8 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             SgStatementPtrList &init_stmt_list = forstmt->get_init_stmt();
             SgStatementPtrList::const_iterator init_stmt_iter;
             for (init_stmt_iter = init_stmt_list.begin();
-                    init_stmt_list != init_stmt_list.end();
-                    init_stmt_list++) {
+                    init_stmt_iter != init_stmt_list.end();
+                    init_stmt_iter++) {
                 stmt = *init_stmt_iter;
                 if (init_stmt_iter != init_stmt_list.begin())
                     out << ", ";
@@ -651,14 +653,42 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             if (expr_stmt)
                 examineExpr(expr_stmt->get_expression(), out);
             out << "; ";
-            expr = for_stmt->get_increment();
+            expr = forstmt->get_increment();
             examineExpr(expr, out);
             out << ")" << endl;
             examineStatement(forstmt->get_loop_body(), out);
-            break;
+            return;
+        case V_SgScopeStatement:
+            SgScopeStatement *scope = isSgScopeStatement(stmt);
+            examineScopeStatement(scope, "for loop", out);
+            return;
+        case V_SgIfStmt:
+            SgIfStmt *ifstmt = isSgIfStmt(stmt);
+            out << "if (";
+            stmt = ifstmt->get_conditional();
+            expr_stmt = isSgExprStatement(stmt);
+            if (expr_stmt)
+                examineExpr(expr_stmt->get_expression(), out);
+            out << ")" << endl;
+            stmt = ifstmt->get_true_body();
+            examineStatement(stmt, out);
+            stmt = ifstmt->get_false_body();
+            if (stmt) {
+                out << "else";
+                examineStatement(stmt, out);
+            }
+            return;
+        case V_SgWhileStmt:
+            SgWhileStmt *whilestmt = isSgWhileStmt(stmt);
+            expr_stmt = isSgExprStatement(whilestmt->get_condition());
+            out << "while (";
+            if (expr_stmt)
+                examineExpr(expr_stmt->get_expression(), out);
+            out << ")" << endl;
+            stmt = whilestmt->get_body();
+            examineStatement(stmt, out);
+            return;
     }
-    out << ";";
-    out << "/* " << stmt->class_name() << "*/";
 }
 
 void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
