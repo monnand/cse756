@@ -731,6 +731,19 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             examineStatement(stmt, out);
             break;
         }
+        case V_SgDoWhileStmt:
+        {
+            SgDoWhileStmt *dowhilestmt = isSgDoWhileStmt(stmt);
+            expr_stmt = isSgExprStatement(dowhilestmt->get_condition());
+            stmt = dowhilestmt->get_body();
+            out << "do";
+            examineStatement(stmt, out);
+            out << " while (";
+            if (expr_stmt)
+                examineExpr(expr_stmt->get_expression(), out);
+            out << ");" << endl;
+            break;
+        }
     }
 }
 
