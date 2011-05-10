@@ -144,6 +144,7 @@ void examineExpr(SgExpression *expr, ostream &out) {
             out << ")";
              break;
         case V_SgMinusMinusOp:
+            unaryop = isSgUnaryOp(expr);
             if (unaryop->get_mode()) {
                 out << "(";
                 e1 = unaryop->get_operand();
@@ -158,7 +159,6 @@ void examineExpr(SgExpression *expr, ostream &out) {
             break;
         case V_SgPlusPlusOp:
             unaryop = isSgUnaryOp(expr);
-            SgPlusPlusOp *ppop = isSgPlusPlusOp(expr);
             if (unaryop->get_mode()) {
                 out << "(";
                 e1 = unaryop->get_operand();
@@ -542,9 +542,10 @@ void examineExpr(SgExpression *expr, ostream &out) {
             break;
         case V_SgFloatVal:
             SgFloatVal *floatval = isSgFloatVal(expr);
-            out << floatval->get_value() << "F";
+            out << floatval->get_value();
             break;
         default:
+            out << "/* UNKNOWN EXPR[" << expr->class_name() << "](" << expr->variantT() << ") " << expr->unparseToString() << " */" << endl;
             cerr << "UNKNOWN EXPR[" << expr->class_name() << "] " << expr->unparseToString() << endl;
             break;
     }
