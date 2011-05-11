@@ -1178,27 +1178,57 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
         }
         case V_SgWhileStmt:
         {
+            stringstream head;
             SgWhileStmt *whilestmt = isSgWhileStmt(stmt);
             expr_stmt = isSgExprStatement(whilestmt->get_condition());
-            out << "while (";
-            if (expr_stmt)
-                examineExpr(expr_stmt->get_expression(), out);
-            out << ")" << endl;
+            head << "while (";
+            if (expr_stmt) {
+                attr1 = examineExpr(expr_stmt->get_expression(), head);
+                if (NULL != attr1)
+                    delete attr1;
+            }
+            out << head.str() << ")" << endl;
+            head << ")" << endl << "{" << endl;
+            expr_attr = new ExprSynAttr();
+            expr_attr->code << head.str();
+
+            /* Loop Body */
             stmt = whilestmt->get_body();
-            examineStatement(stmt, out);
+            attr1 = examineStatement(stmt, out);
+
+            attr1->output_tmp_decls(expr_attr->code);
+            expr_attr->code << attr1->code.str();
+            expr_attr->code << "}" << endl;
+
+            delete attr1;
             break;
         }
         case V_SgDoWhileStmt:
         {
+            stringstream head;
             SgDoWhileStmt *dowhilestmt = isSgDoWhileStmt(stmt);
             expr_stmt = isSgExprStatement(dowhilestmt->get_condition());
             stmt = dowhilestmt->get_body();
             out << "do";
-            examineStatement(stmt, out);
+            head << "do" << endl << "{" << endl;
+            expr_attr = new ExprSynAttr();
+            expr_attr->code << head.str();
+            attr1 = examineStatement(stmt, out);
+            attr1->output_tmp_decls(expr_attr->code);
+            expr_attr->code << attr1->code.str();
+            expr_attr->code << "}" << endl;
+            expr_attr->code << " while (";
+            delete attr1;
             out << " while (";
-            if (expr_stmt)
-                examineExpr(expr_stmt->get_expression(), out);
+            head.str("");
+            if (expr_stmt) {
+                attr1 = examineExpr(expr_stmt->get_expression(), head);
+                delete attr1;
+                out << head.str();
+                expr_attr->code << head.str();
+            }
             out << ");" << endl;
+            expr_attr->code << ");" << endl;
             break;
         }
     }
