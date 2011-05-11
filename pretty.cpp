@@ -867,8 +867,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " + " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
             break;
         case V_SgMinusAssignOp:
@@ -887,8 +889,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " - " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
 
             break;
@@ -908,8 +912,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " & " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
             break;
         case V_SgIorAssignOp:
@@ -928,8 +934,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " | " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
             break;
         case V_SgMultAssignOp:
@@ -948,8 +956,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " * " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
             break;
         case V_SgDivAssignOp:
@@ -968,10 +978,12 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " / " << attr2->result_var;
             ret->code << ";" << endl;
 
+            ret->code << ret->result_var << " = " << tmp_name;
+            ret->code << ";" << endl;
             break;
         case V_SgModAssignOp:
             binop = isSgBinaryOp(expr);
@@ -989,10 +1001,12 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " % " << attr2->result_var;
             ret->code << ";" << endl;
 
+            ret->code << ret->result_var << " = " << tmp_name;
+            ret->code << ";" << endl;
 
             break;
         case V_SgXorAssignOp:
@@ -1011,8 +1025,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " ^ " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
 
             break;
@@ -1032,8 +1048,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " << " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
 
             break;
@@ -1053,8 +1071,10 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = attr1->result_var;
             ret->code << attr1->code.str();
             ret->code << attr2->code.str();
-            ret->code << ret->result_var << " = ";
+            ret->code << tmp_name << " = ";
             ret->code << attr1->result_var << " >> " << attr2->result_var;
+            ret->code << ";" << endl;
+            ret->code << ret->result_var << " = " << tmp_name;
             ret->code << ";" << endl;
 
             break;
