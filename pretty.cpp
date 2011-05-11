@@ -11,6 +11,7 @@ class ExprSynAttr {
     private:
         static int tmp_count;
         map<string, string> tmp_decls;
+        bool is_type_from_expr;
     public:
         string result_var;
         stringstream code;
@@ -19,6 +20,20 @@ class ExprSynAttr {
     public:
         ExprSynAttr() {
             result_var = "";
+            is_type_from_expr = false;
+        }
+
+        ExprSynAttr(SgExpression *expr) {
+            if (NULL == expr) {
+                result_var = "";
+                is_type_from_expr = false;
+                return;
+            }
+            sgtype = expr->get_type();
+            is_type_from_expr = true;
+            stringstream ts;
+            examineType(sgtype, ts);
+            type = ts.str();
         }
 
         void output_tmp_decls(ostream &out) {
@@ -30,6 +45,8 @@ class ExprSynAttr {
         }
 
         void cast_type(ExprSynAttr *a, ExprSynAttr *b) {
+            if (is_type_from_expr)
+                return;
             if (a->type == b->type) {
                 type = a->type;
                 sgtype = a->sgtype;
@@ -40,6 +57,8 @@ class ExprSynAttr {
         }
 
         void basetype(ExprSynAttr *a) {
+            if (is_type_from_expr)
+                return;
             stringstream ts;
             if (NULL == a)
                 return;
@@ -302,7 +321,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
     if (expr == NULL)
         return NULL;
 
-    ret = new ExprSynAttr();
+    ret = new ExprSynAttr(expr);
     attr1 = NULL;
     attr2 = NULL;
     switch(expr->variantT()) {
