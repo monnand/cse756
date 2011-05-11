@@ -62,7 +62,7 @@ class ExprSynAttr {
             type = ts.str();
         }
 
-        void union_tmp_decls(ExprSynAttr *a, ExprSynAttr *b) {
+        void union_tmp_decls(ExprSynAttr *a, ExprSynAttr *b = NULL) {
             map<string, string>::iterator it;
             if (NULL == a)
                 return;
@@ -109,8 +109,8 @@ int ExprSynAttr::tmp_count = 0;
 
 ExprSynAttr *examineExpr(SgExpression *expr, ostream &out);
 void examinePrimTypeName(SgType *type, ostream &out);
-void examineStatement(SgStatement *stmt, ostream &out);
-void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out);
+ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out);
+ExprSynAttr *examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out);
 
 void examineType(SgType *type, ostream &out) {
     int nr_stars = 0;
@@ -147,7 +147,7 @@ void examineType(SgType *type, ostream &out) {
     out << ss1.str();
 }
 
-void examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
+ExprSynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
     SgSymbolTable* symbol_table = scope->get_symbol_table();
     set<SgNode*> symbol_nodes = symbol_table->get_symbols();
     set<SgNode*>::const_iterator symbol_iter;
@@ -171,9 +171,18 @@ void examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
     */
 
     SgBasicBlock *body;
+    ExprSynAttr *expr_attr;
+    ExprSynAttr *ret;
+    stringstream fake;
+    stringstream codestream;
+
+    ret = new ExprSynAttr();
+
     if (scope->variantT() != V_SgBasicBlock) {
         out << "}" << endl;
-        return;
+        ret->code << "{" << endl;
+        ret->code << "}" << endl;
+        return ret;
     } else
         body = isSgBasicBlock(scope);
 
@@ -184,11 +193,23 @@ void examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
             stmt_iter != stmt_list.end();
             stmt_iter++) {
         SgStatement *stmt = *stmt_iter;
-        examineStatement(stmt, out);
+        expr_attr = examineStatement(stmt, out);
+        ret->union_tmp_decls(expr_attr);
+        ret->code << expr_attr->code.str() << endl;
+        delete expr_attr;
         out << endl;
     }
 
+    expr_attr = new ExprSynAttr();
+    expr_attr->code << "{" << endl;
+    ret->output_tmp_decls(expr_attr->code);
+    expr_attr->code << ret->code.str();
+    expr_attr->code << "}" << endl;
+
+    delete ret;
+
     out << "}" << endl;
+    return expr_attr;
   /*
   int num_vars = 0;
   for (symbol_iter = symbol_nodes.begin(); 
@@ -1005,58 +1026,71 @@ void examineInitializedName(SgInitializedName *name, ostream &out) {
 }
 
 
-void examineStatement(SgStatement *stmt, ostream &out) {
+ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
     SgExpression *expr;
     SgExprStatement *expr_stmt;
-    ExprSynAttr *expr_attr;
+    ExprSynAttr *expr_attr = NULL;
+    ExprSynAttr *attr1 = NULL;
 
     stringstream fake;
     int i;
     if (NULL == stmt)
-        return;
+        return NULL;
     //out << "/* " << stmt->unparseToString() << " */" << endl;
+
     switch(stmt->variantT()) {
         case V_SgExprStatement:
         {
             expr_stmt = isSgExprStatement(stmt);
-            expr_attr = examineExpr(expr_stmt->get_expression(), out);
-            out << ";";
+            expr_attr = examineExpr(expr_stmt->get_expression(), fake);
+            //out << ";";
             if (NULL != expr_attr) {
                 expr_attr->output_comments(out);
-                delete expr_attr;
             }
             break;
         }
         case V_SgVariableDeclaration:
         {
             SgVariableDeclaration *vardecl = isSgVariableDeclaration(stmt);
-            examineVariableDeclaration(vardecl, out);
+            expr_attr = examineVariableDeclaration(vardecl, out);
             break;
         }
         case V_SgBreakStmt:
         {
             out << "break;";
+            expr_attr->code << "break;";
             break;
         }
         case V_SgContinueStmt:
         {
             out << "continue;";
+            expr_attr->code << "continue;";
             break;
         }
         case V_SgReturnStmt:
         {
             SgReturnStmt *retstmt = isSgReturnStmt(stmt);
+            expr_attr = new ExprSynAttr();
             out << "return ";
             expr = retstmt->get_expression();
             if (expr) {
-                examineExpr(expr, out);
+                attr1 = examineExpr(expr, out);
+                expr_attr->union_tmp_decls(attr1);
+                expr_attr->code << attr1->code.str();
             }
             out << ";";
+            expr_attr->code << "return ";
+            if (attr1) {
+                expr_attr->result_var = attr1->result_var;
+                expr_attr->code << expr_attr->result_var;
+            }
+            expr_attr->code << ";";
             break;
         }
         case V_SgForStatement:
         {
-            out << "for (";
+            stringstream head;
+            head << "for (";
             SgForStatement *forstmt = isSgForStatement(stmt);
             SgStatementPtrList &init_stmt_list = forstmt->get_init_stmt();
             SgStatementPtrList::const_iterator init_stmt_iter;
@@ -1065,27 +1099,36 @@ void examineStatement(SgStatement *stmt, ostream &out) {
                     init_stmt_iter++) {
                 stmt = *init_stmt_iter;
                 if (init_stmt_iter != init_stmt_list.begin())
-                    out << ", ";
+                    head << ", ";
                 expr_stmt = isSgExprStatement(stmt);
                 if (expr_stmt)
-                    examineExpr(expr_stmt->get_expression(), out);
+                    examineExpr(expr_stmt->get_expression(), head);
             }
-            out << "; ";
+            head << "; ";
             expr_stmt = isSgExprStatement(forstmt->get_test());
             if (expr_stmt)
-                examineExpr(expr_stmt->get_expression(), out);
-            out << "; ";
+                examineExpr(expr_stmt->get_expression(), head);
+            head << "; ";
             expr = forstmt->get_increment();
-            examineExpr(expr, out);
-            out << ")" << endl;
+            examineExpr(expr, head);
+            head << ")" << endl;
             stmt = forstmt->get_loop_body();
-            examineStatement(stmt, out);
+            expr_attr = examineStatement(stmt, fake);
+            attr1 = new ExprSynAttr();
+            attr1->union_tmp_decls(expr_attr);
+            attr1->code << head.str();
+            attr1->code << expr_attr->code.str();
+            delete expr_attr;
+            expr_attr = attr1;
+            attr1 = NULL;
+            out << head.str();
+            out << fake.str();
             break;
         }
         case V_SgBasicBlock:
         {
             SgScopeStatement *scope = isSgScopeStatement(stmt);
-            examineScopeStatement(scope, "scope", out);
+            expr_attr = examineScopeStatement(scope, "scope", out);
             break;
         }
         case V_SgIfStmt: 
@@ -1132,11 +1175,16 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             break;
         }
     }
+
+    return expr_attr;
 }
 
-void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
+ExprSynAttr *examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
   SgInitializedNamePtrList& name_list = decl->get_variables();
   SgInitializedNamePtrList::const_iterator name_iter;
+  ExprSynAttr *ret = NULL;
+  ExprSynAttr *gc = NULL;
+  ret = new ExprSynAttr();
   for (name_iter = name_list.begin(); 
        name_iter != name_list.end(); 
        name_iter++) {
@@ -1164,12 +1212,14 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
         }
     }
 
-    examinePrimTypeName(type, out);
-    out << " ";
+    examinePrimTypeName(type, ret->code);
+    ret->code << " ";
     for (int i = 0; i < nr_stars; ++i)
-        out << "*";
-    out << symbol->get_name().getString();
-    out << ss1.str();
+        ret->code << "*";
+    ret->code << symbol->get_name().getString();
+    ret->code << ss1.str();
+
+    ss1.str("");
 
     SgInitializer *initer = name->get_initializer();
     if (initer) {
@@ -1178,8 +1228,10 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
                 SgAssignInitializer *ai = isSgAssignInitializer(initer);
                 SgExpression *expr = ai->get_operand();
                 if (expr) {
-                    out << "=";
-                    examineExpr(expr, out);
+                    ret->code << "=";
+                    gc = examineExpr(expr, ret->code);
+                    if (gc != NULL)
+                        delete gc;
                 }
                 break;
             default:
@@ -1188,7 +1240,10 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
     }
 
     /* end of this decl */
-    out << ";";
+    ret->code << ";";
+    out << ret->code.str();
+
+    return ret;
 
     /*
     cout << "[Decl] Variable (name:"<<symbol->get_name().getString();
@@ -1208,6 +1263,9 @@ void examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
 void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     SgSymbol* symbol = decl->get_symbol_from_symbol_table();
     SgFunctionDefinition* def = decl->get_definition();
+
+    ExprSynAttr *attr;
+    stringstream fake;
 
     /* We don't want to output the function withou definition */
     if (NULL == symbol || NULL == def)
@@ -1232,13 +1290,18 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     out << endl;
 
     SgBasicBlock* body = def->get_body();
-    examineScopeStatement(body,symbol->get_name().getString(), out);
+    attr = examineScopeStatement(body,symbol->get_name().getString(), fake);
+    out << attr->code.str();
+    delete attr;
 }
 
 string prettyPrint(SgProject* project) {
   SgFilePtrList& file_list = project->get_fileList();
   SgFilePtrList::const_iterator file_iter;
   stringstream rets;
+  stringstream fake;
+
+  ExprSynAttr *attr1, *attr2;
   for (file_iter = file_list.begin(); 
        file_iter != file_list.end(); 
        file_iter++) {
@@ -1259,8 +1322,9 @@ string prettyPrint(SgProject* project) {
 	decl_iter != decl_list.end(); 
 	decl_iter++) {
       SgDeclarationStatement* decl = *decl_iter;
-      if (isSgFunctionDeclaration(decl)) 
-	examineFunctionDeclaration(isSgFunctionDeclaration(decl), rets);
+      if (isSgFunctionDeclaration(decl))  {
+	    examineFunctionDeclaration(isSgFunctionDeclaration(decl), rets);
+      }
       if (isSgVariableDeclaration(decl)) {
 	examineVariableDeclaration(isSgVariableDeclaration(decl), rets);
             rets << endl;
