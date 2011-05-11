@@ -22,5 +22,7 @@ int main() {
         b = a + 1;
         a = b;
         a = -(a + 1);
+        kk = b--;
+        jj = ++b;
     }
 }

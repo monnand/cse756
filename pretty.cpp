@@ -302,6 +302,15 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             e1 = unaryop->get_operand();
             attr1 = examineExpr(e1, out);
             out << ")";
+
+            ret->basetype(attr1);
+            ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
+            ret->code << attr1->code.str();
+            ret->code << ret->result_var << "= *" << attr1->result_var;
+            ret->code << ";" << endl;
+
             break;
         case V_SgAddressOfOp:
              out << "(&";
@@ -309,6 +318,14 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             e1 = unaryop->get_operand();
             attr1 = examineExpr(e1, out);
             out << ")";
+            ret->type = attr1->type + "*";
+            /* FIXME ret->sgtype */
+            ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
+            ret->code << attr1->code.str();
+            ret->code << ret->result_var << "= &" << attr1->result_var;
+            ret->code << ";" << endl;
              break;
         case V_SgMinusMinusOp:
             unaryop = isSgUnaryOp(expr);
@@ -317,11 +334,31 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
                 e1 = unaryop->get_operand();
                 attr1 = examineExpr(e1, out);
                 out << "--)";
+
+                ret->type = attr1->type;
+                ret->sgtype = attr1->sgtype;
+
+                ret->new_tmp_name();
+                ret->add_new_tmp_decl(ret->type, ret->result_var);
+                ret->union_tmp_decls(attr1);
+                ret->code << attr1->code.str();
+                ret->code << ret->result_var << "=" << attr1->result_var << ";" << endl;
+
+                ret->code << attr1->result_var << "=" << attr1->result_var << "-1;" << endl;
             } else {
                 out << "(--";
                 e1 = unaryop->get_operand();
                 attr1 = examineExpr(e1, out);
                 out << ")";
+
+                ret->type = attr1->type;
+                ret->sgtype = attr1->sgtype;
+
+                ret->result_var = attr1->result_var;
+                ret->union_tmp_decls(attr1);
+                ret->code << attr1->code.str();
+
+                ret->code << ret->result_var << "=" << attr1->result_var << "-1;" << endl;
             }
             break;
         case V_SgPlusPlusOp:
@@ -331,11 +368,33 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
                 e1 = unaryop->get_operand();
                 attr1 = examineExpr(e1, out);
                 out << "++)";
+
+                ret->type = attr1->type;
+                ret->sgtype = attr1->sgtype;
+
+                ret->new_tmp_name();
+                ret->add_new_tmp_decl(ret->type, ret->result_var);
+                ret->union_tmp_decls(attr1);
+                ret->code << attr1->code.str();
+                ret->code << ret->result_var << "=" << attr1->result_var << ";" << endl;
+
+                ret->code << attr1->result_var << "=" << attr1->result_var << "+1;" << endl;
+
             } else {
                 out << "(++";
                 e1 = unaryop->get_operand();
                 attr1 = examineExpr(e1, out);
                 out << ")";
+
+                ret->type = attr1->type;
+                ret->sgtype = attr1->sgtype;
+
+                ret->result_var = attr1->result_var;
+                ret->union_tmp_decls(attr1);
+                ret->code << attr1->code.str();
+
+                ret->code << ret->result_var << "=" << attr1->result_var << "+1;" << endl;
+
             }
             break;
         case V_SgBitComplementOp:
