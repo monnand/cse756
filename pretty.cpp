@@ -26,6 +26,7 @@ class ExprSynAttr {
             for (it = tmp_decls.begin(); it != tmp_decls.end(); it++) {
                 out << it->second << " " << it->first << ";" << endl;
             }
+            out << endl;
         }
 
         void cast_type(ExprSynAttr *a, ExprSynAttr *b) {
@@ -256,6 +257,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->type = attr1->type;
             ret->sgtype = attr1->sgtype;
             ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
             ret->code << attr1->code.str();
             ret->code << ret->result_var << "= -" << attr1->result_var;
             ret->code << ";" << endl;
@@ -270,6 +273,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->type = attr1->type;
             ret->sgtype = attr1->sgtype;
             ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
             ret->code << attr1->code.str();
             ret->code << ret->result_var << "= +" << attr1->result_var;
             ret->code << ";" << endl;
@@ -284,6 +289,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->type = "int";
             ret->sgtype = attr1->sgtype;
             ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
             ret->code << attr1->code.str();
             ret->code << ret->result_var << "= (int)!" << attr1->result_var;
             ret->code << ";" << endl;
@@ -1117,7 +1124,7 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             stmt = forstmt->get_loop_body();
             expr_attr = examineStatement(stmt, fake);
             attr1 = new ExprSynAttr();
-            attr1->code << head.str() 
+            attr1->code << head.str();
             if (!isSgScopeStatement(stmt)) {
                 attr1->code << "{" << endl;
             }
@@ -1158,10 +1165,15 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             stmt = ifstmt->get_true_body();
             expr_attr = examineStatement(stmt, fake);
             attr1 = new ExprSynAttr();
-            attr1->code << head.str() << "{" << endl;
+            attr1->code << head.str();
+            if (!isSgScopeStatement(stmt)) {
+                attr1->code << "{" << endl;
+            }
             expr_attr->output_tmp_decls(attr1->code);
             attr1->code << expr_attr->code.str();
-            attr1->code << "}" << endl;
+            if (!isSgScopeStatement(stmt)) {
+                attr1->code << "}" << endl;
+            }
             delete expr_attr;
             expr_attr = attr1;
             attr1 = NULL;
@@ -1172,11 +1184,16 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             stmt = ifstmt->get_false_body();
             if (stmt) {
                 out << endl << "else" << endl;
-                expr_attr->code << endl << "else" << endl << "{ " << endl;
+                expr_attr->code << endl << "else" << endl;
                 attr1 = examineStatement(stmt, out);
+                if (!isSgScopeStatement(stmt)) {
+                    expr_attr->code << "{" << endl;
+                }
                 attr1->output_tmp_decls(expr_attr->code);
                 expr_attr->code << attr1->code.str();
-                expr_attr->code << "}" << endl;
+                if (!isSgScopeStatement(stmt)) {
+                    expr_attr->code << "}" << endl;
+                }
             }
 
             break;
@@ -1220,13 +1237,20 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             expr_stmt = isSgExprStatement(dowhilestmt->get_condition());
             stmt = dowhilestmt->get_body();
             out << "do";
-            head << "do" << endl << "{" << endl;
+            head << "do" << endl;
+            if (!isSgScopeStatement(stmt)) {
+                head << "{" << endl;
+            }
             expr_attr = new ExprSynAttr();
             expr_attr->code << head.str();
             attr1 = examineStatement(stmt, out);
+
+
             attr1->output_tmp_decls(expr_attr->code);
             expr_attr->code << attr1->code.str();
-            expr_attr->code << "}" << endl;
+            if (!isSgScopeStatement(stmt)) {
+                expr_attr->code << "}" << endl;
+            }
             expr_attr->code << " while (";
             delete attr1;
             out << " while (";

@@ -1,3 +1,6 @@
+int kk = 1;
+int jj = 2;
+
 int main() {
     int aarr[10];
     int a = 1;
@@ -18,5 +21,6 @@ int main() {
     while (a < 100) {
         b = a + 1;
         a = b;
+        a = -(a + 1);
     }
 }
