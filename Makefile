@@ -50,3 +50,7 @@ clean		:
 			rm $(BINARY_FILE)
 
 
+commitpj4: pretty.cpp
+	cp pretty.cpp intermediate1.cpp
+	submit c756aa lab4 intermediate1.cpp
+
