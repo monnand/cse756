@@ -1112,12 +1112,15 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             expr = forstmt->get_increment();
             examineExpr(expr, head);
             head << ")" << endl;
+
+            /* Loop body */
             stmt = forstmt->get_loop_body();
             expr_attr = examineStatement(stmt, fake);
             attr1 = new ExprSynAttr();
-            attr1->union_tmp_decls(expr_attr);
-            attr1->code << head.str();
+            attr1->code << head.str() << "{" << endl;
+            expr_attr->output_tmp_decls(attr1->code);
             attr1->code << expr_attr->code.str();
+            attr1->code << "}" << endl;
             delete expr_attr;
             expr_attr = attr1;
             attr1 = NULL;
@@ -1133,20 +1136,44 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
         }
         case V_SgIfStmt: 
         {
+            stringstream head;
             SgIfStmt *ifstmt = isSgIfStmt(stmt);
-            out << "if (";
+            head << "if (";
             stmt = ifstmt->get_conditional();
             expr_stmt = isSgExprStatement(stmt);
-            if (expr_stmt)
-                examineExpr(expr_stmt->get_expression(), out);
-            out << ")" << endl;
+            if (expr_stmt) {
+                attr1 = examineExpr(expr_stmt->get_expression(), head);
+                if (attr1 != NULL)
+                    delete attr1;
+            }
+            head << ")" << endl;
+            out << head.str();
+
+            /* True body */
             stmt = ifstmt->get_true_body();
-            examineStatement(stmt, out);
+            expr_attr = examineStatement(stmt, fake);
+            attr1 = new ExprSynAttr();
+            attr1->code << head.str() << "{" << endl;
+            expr_attr->output_tmp_decls(attr1->code);
+            attr1->code << expr_attr->code.str();
+            attr1->code << "}" << endl;
+            delete expr_attr;
+            expr_attr = attr1;
+            attr1 = NULL;
+            out << head.str();
+            out << fake.str();
+
+            /* False body */
             stmt = ifstmt->get_false_body();
             if (stmt) {
                 out << endl << "else" << endl;
-                examineStatement(stmt, out);
+                expr_attr->code << endl << "else" << endl << "{ " << endl;
+                attr1 = examineStatement(stmt, out);
+                attr1->output_tmp_decls(expr_attr->code);
+                expr_attr->code << attr1->code.str();
+                expr_attr->code << "}" << endl;
             }
+
             break;
         }
         case V_SgWhileStmt:
