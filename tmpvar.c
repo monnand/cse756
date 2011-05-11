@@ -6,7 +6,7 @@ int main() {
     int a = 1;
 
     int b;
-    b = a + 1;
+    b = a < 1;
     aarr[b + 3] = 10;
 
     for (a = 0; a < 100; a++)
