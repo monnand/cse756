@@ -5,14 +5,17 @@
 
 using namespace std;
 
+void examineType(SgType *type, ostream &out);
+
 class ExprSynAttr {
     private:
         static int tmp_count;
+        map<string, string> tmp_decls;
     public:
         string result_var;
-        map<string, string> tmp_decls;
         stringstream code;
         string type;
+        SgType *sgtype;
     public:
         ExprSynAttr() {
             result_var = "";
@@ -26,9 +29,37 @@ class ExprSynAttr {
         }
 
         void cast_type(ExprSynAttr *a, ExprSynAttr *b) {
-            if (a->type == b->type)
+            if (a->type == b->type) {
                 type = a->type;
-            type = a->type;
+                sgtype = a->sgtype;
+            } else {
+               type = a->type;
+               sgtype = a->sgtype;
+            }
+        }
+
+        void basetype(ExprSynAttr *a) {
+            stringstream ts;
+            if (NULL == a)
+                return;
+            switch (a->sgtype->variantT()) {
+                case V_SgArrayType:
+                {
+                    SgArrayType *atype = isSgArrayType(a->sgtype);
+                    sgtype = atype->get_base_type();
+                    break;
+                }
+                case V_SgPointerType:
+                {
+                    SgPointerType *ptype = isSgPointerType(a->sgtype);
+                    sgtype = ptype->get_base_type();
+                    break;
+                }
+                default:
+                    sgtype = a->sgtype;
+            }
+            examineType(sgtype, ts);
+            type = ts.str();
         }
 
         void union_tmp_decls(ExprSynAttr *a, ExprSynAttr *b) {
@@ -65,6 +96,13 @@ class ExprSynAttr {
             tmp_count++;
             out = o.str();
         }
+
+        void new_tmp_name() {
+            stringstream o;
+            o << "_t" << tmp_count;
+            tmp_count++;
+            result_var = o.str();
+        }
 };
 
 int ExprSynAttr::tmp_count = 0;        
@@ -88,10 +126,13 @@ void examineType(SgType *type, ostream &out) {
             SgExpression *expr = atype->get_index();
 
             type = atype->get_base_type();
+            /*
             ss1 << "[";
             if (expr)
                 examineExpr(expr, ss1);
             ss1 << "]";
+            */
+            nr_stars++;
         } else {
             SgPointerType *ttype = isSgPointerType(type);
             type = ttype->get_base_type();
@@ -176,6 +217,9 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
     string tmp_name;
     string tmp_type;
 
+    if (expr == NULL)
+        return NULL;
+
     ret = new ExprSynAttr();
     attr1 = NULL;
     attr2 = NULL;
@@ -187,6 +231,13 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             e1 = unaryop->get_operand();
             attr1 = examineExpr(e1, out);
             out << ")";
+
+            ret->type = attr1->type;
+            ret->sgtype = attr1->sgtype;
+            ret->new_tmp_name();
+            ret->code << attr1->code.str();
+            ret->code << ret->result_var << "= -" << attr1->result_var;
+            ret->code << ";" << endl;
             break;
         case V_SgUnaryAddOp:
             out << "(+";
@@ -194,6 +245,13 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             e1 = unaryop->get_operand();
             attr1 = examineExpr(e1, out);
             out << ")";
+
+            ret->type = attr1->type;
+            ret->sgtype = attr1->sgtype;
+            ret->new_tmp_name();
+            ret->code << attr1->code.str();
+            ret->code << ret->result_var << "= +" << attr1->result_var;
+            ret->code << ";" << endl;
             break;
         case V_SgNotOp:
             out << "(!";
@@ -201,6 +259,14 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             e1 = unaryop->get_operand();
             attr1 = examineExpr(e1, out);
             out << ")";
+
+            ret->type = "int";
+            ret->sgtype = attr1->sgtype;
+            ret->new_tmp_name();
+            ret->code << attr1->code.str();
+            ret->code << ret->result_var << "= (int)!" << attr1->result_var;
+            ret->code << ";" << endl;
+
             break;
         case V_SgPointerDerefExp:
             out << "(*";
@@ -264,6 +330,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             stringstream casts;
             examineType(type, casts);
             ret->type = casts.str();
+            ret->sgtype = type;
             ret->new_tmp_name(tmp_name);
             ret->union_tmp_decls(attr1, NULL);
             ret->add_new_tmp_decl(ret->type, tmp_name);
@@ -287,6 +354,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             out << ")";
 
             ret->type = "int";
+            ret->sgtype = attr1->sgtype;
             ret->new_tmp_name(tmp_name);
             ret->union_tmp_decls(attr1, attr2);
             ret->add_new_tmp_decl(ret->type, tmp_name);
@@ -482,6 +550,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr2 = examineExpr(e2, out);
             out << ")";
 
+            ret->cast_type(attr1, attr2);
             ret->type = "int";
             ret->new_tmp_name(tmp_name);
             ret->union_tmp_decls(attr1, attr2);
@@ -502,8 +571,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr2 = examineExpr(e2, out);
             out << ")";
 
-            ret->type = "int";
             ret->cast_type(attr1, attr2);
+            ret->type = "int";
             ret->new_tmp_name(tmp_name);
             ret->union_tmp_decls(attr1, attr2);
             ret->add_new_tmp_decl(ret->type, tmp_name);
@@ -511,7 +580,6 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->code << attr1->code.str() << attr2->code.str() << tmp_name;
             ret->code << "=" << attr1->result_var << "||" << attr2->result_var;
             ret->code << ";" << endl;
-
 
             break;
         case V_SgBitXorOp:
@@ -614,10 +682,9 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr2 = examineExpr(e2, out);
 
             ret->cast_type(attr1, attr2);
-            ret->new_tmp_name(tmp_name);
             ret->union_tmp_decls(attr1, attr2);
             ret->result_var = attr1->result_var;
-            ret->code << attr1->code.str() << attr2->code.str() << ret->result_var;
+            ret->code << attr2->code.str() << attr1->code.str() << ret->result_var;
             ret->code << "=" << attr2->result_var;
             ret->code << ";" << endl;
 
@@ -723,6 +790,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             out << ")";
             break;
         case V_SgPntrArrRefExp:
+        {
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
             e2 = binop->get_rhs_operand();
@@ -730,6 +798,15 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             out << "[";
             attr2 = examineExpr(e2, out);
             out << "]";
+
+            ret->basetype(attr1);
+            ret->union_tmp_decls(attr1, attr2);
+
+            ret->result_var = attr1->result_var + "[" + attr2->result_var + "]";
+
+            ret->code << attr1->code.str() << attr2->code.str();
+            break;
+        }
 
         /* End BinaryOp */
 
@@ -747,6 +824,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->result_var = svsym->get_name().getString();
             examineType(svsym->get_type(), casts);
             ret->type = casts.str();
+            ret->sgtype = svsym->get_type();
             break;
         }
         case V_SgLabelRefExp:
@@ -765,6 +843,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
 
             ret->result_var = casts.str();
             ret->type = "int";
+            ret->sgtype = intval->get_type();
             
             break;
         }
@@ -778,6 +857,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
 
             ret->result_var = casts.str();
             ret->type = "long";
+            ret->sgtype = longval->get_type();
             
             break;
         }
@@ -792,6 +872,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
  
             ret->result_var = casts.str();
             ret->type = "unsigned";
+            ret->sgtype = uintval->get_type();
             
             break;
         }
@@ -805,6 +886,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
 
             ret->result_var = casts.str();
             ret->type = "unsigned long";
+            ret->sgtype = ulongval->get_type();
             
             break;
         }
@@ -818,6 +900,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
 
             ret->result_var = casts.str();
             ret->type = "double";
+            ret->sgtype = doubleval->get_type();
             
             break;
         }
@@ -831,6 +914,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
 
             ret->result_var = casts.str();
             ret->type = "float";
+            ret->sgtype = floatval->get_type();
             
             break;
         }
@@ -925,6 +1009,8 @@ void examineStatement(SgStatement *stmt, ostream &out) {
     SgExpression *expr;
     SgExprStatement *expr_stmt;
     ExprSynAttr *expr_attr;
+
+    stringstream fake;
     int i;
     if (NULL == stmt)
         return;
@@ -935,8 +1021,10 @@ void examineStatement(SgStatement *stmt, ostream &out) {
             expr_stmt = isSgExprStatement(stmt);
             expr_attr = examineExpr(expr_stmt->get_expression(), out);
             out << ";";
-            expr_attr->output_comments(out);
-            delete expr_attr;
+            if (NULL != expr_attr) {
+                expr_attr->output_comments(out);
+                delete expr_attr;
+            }
             break;
         }
         case V_SgVariableDeclaration:
