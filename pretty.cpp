@@ -26,6 +26,7 @@ class ExprSynAttr {
             for (it = tmp_decls.begin(); it != tmp_decls.end(); it++) {
                 out << it->second << " " << it->first << ";" << endl;
             }
+            out << endl;
         }
 
         void cast_type(ExprSynAttr *a, ExprSynAttr *b) {
@@ -256,6 +257,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->type = attr1->type;
             ret->sgtype = attr1->sgtype;
             ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
             ret->code << attr1->code.str();
             ret->code << ret->result_var << "= -" << attr1->result_var;
             ret->code << ";" << endl;
@@ -270,6 +273,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->type = attr1->type;
             ret->sgtype = attr1->sgtype;
             ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
             ret->code << attr1->code.str();
             ret->code << ret->result_var << "= +" << attr1->result_var;
             ret->code << ";" << endl;
@@ -284,6 +289,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             ret->type = "int";
             ret->sgtype = attr1->sgtype;
             ret->new_tmp_name();
+            ret->add_new_tmp_decl(ret->type, ret->result_var);
+            ret->union_tmp_decls(attr1);
             ret->code << attr1->code.str();
             ret->code << ret->result_var << "= (int)!" << attr1->result_var;
             ret->code << ";" << endl;
