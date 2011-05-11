@@ -724,6 +724,18 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "+=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " + " << attr2->result_var;
+            ret->code << ";" << endl;
             break;
         case V_SgMinusAssignOp:
             binop = isSgBinaryOp(expr);
@@ -732,6 +744,19 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "-=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " - " << attr2->result_var;
+            ret->code << ";" << endl;
+
             break;
         case V_SgAndAssignOp:
             binop = isSgBinaryOp(expr);
@@ -740,6 +765,18 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "&=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " & " << attr2->result_var;
+            ret->code << ";" << endl;
             break;
         case V_SgIorAssignOp:
             binop = isSgBinaryOp(expr);
@@ -748,6 +785,18 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "|=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " | " << attr2->result_var;
+            ret->code << ";" << endl;
             break;
         case V_SgMultAssignOp:
             binop = isSgBinaryOp(expr);
@@ -756,6 +805,18 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "*=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " * " << attr2->result_var;
+            ret->code << ";" << endl;
             break;
         case V_SgDivAssignOp:
             binop = isSgBinaryOp(expr);
@@ -764,6 +825,19 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "/=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " / " << attr2->result_var;
+            ret->code << ";" << endl;
+
             break;
         case V_SgModAssignOp:
             binop = isSgBinaryOp(expr);
@@ -772,6 +846,20 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "%=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " % " << attr2->result_var;
+            ret->code << ";" << endl;
+
+
             break;
         case V_SgXorAssignOp:
             binop = isSgBinaryOp(expr);
@@ -780,6 +868,19 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "^=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " ^ " << attr2->result_var;
+            ret->code << ";" << endl;
+
             break;
         case V_SgLshiftAssignOp:
             binop = isSgBinaryOp(expr);
@@ -788,6 +889,19 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << "<<=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " << " << attr2->result_var;
+            ret->code << ";" << endl;
+
             break;
         case V_SgRshiftAssignOp:
             binop = isSgBinaryOp(expr);
@@ -796,7 +910,21 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
             attr1 = examineExpr(e1, out);
             out << ">>=";
             attr2 = examineExpr(e2, out);
+
+            ret->cast_type(attr1, attr2);
+            ret->union_tmp_decls(attr1, attr2);
+            ret->new_tmp_name(tmp_name);
+            ret->add_new_tmp_decl(ret->type, tmp_name);
+
+            ret->result_var = attr1->result_var;
+            ret->code << attr1->code.str();
+            ret->code << attr2->code.str();
+            ret->code << ret->result_var << " = ";
+            ret->code << attr1->result_var << " >> " << attr2->result_var;
+            ret->code << ";" << endl;
+
             break;
+
         case V_SgExponentiationOp:
             binop = isSgBinaryOp(expr);
             e1 = binop->get_lhs_operand();
