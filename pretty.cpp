@@ -1117,10 +1117,15 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             stmt = forstmt->get_loop_body();
             expr_attr = examineStatement(stmt, fake);
             attr1 = new ExprSynAttr();
-            attr1->code << head.str() << "{" << endl;
+            attr1->code << head.str() 
+            if (!isSgScopeStatement(stmt)) {
+                attr1->code << "{" << endl;
+            }
             expr_attr->output_tmp_decls(attr1->code);
             attr1->code << expr_attr->code.str();
-            attr1->code << "}" << endl;
+            if (!isSgScopeStatement(stmt)) {
+                attr1->code << "}" << endl;
+            }
             delete expr_attr;
             expr_attr = attr1;
             attr1 = NULL;
@@ -1188,7 +1193,10 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
                     delete attr1;
             }
             out << head.str() << ")" << endl;
-            head << ")" << endl << "{" << endl;
+            head << ")" << endl;
+            if (!isSgScopeStatement(stmt)) {
+                head << "{" << endl;
+            }
             expr_attr = new ExprSynAttr();
             expr_attr->code << head.str();
 
@@ -1198,7 +1206,9 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
 
             attr1->output_tmp_decls(expr_attr->code);
             expr_attr->code << attr1->code.str();
-            expr_attr->code << "}" << endl;
+            if (!isSgScopeStatement(stmt)) {
+                expr_attr->code << "}" << endl;
+            }
 
             delete attr1;
             break;
