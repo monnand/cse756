@@ -1362,7 +1362,6 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             
             /* We need two label here in if-stmt */
             in1->labin = inattr->labin + 2;
-            expr_attr->labout = in1->labin + 2;
 
 
             out << "if (";
@@ -1371,6 +1370,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             expr_stmt = isSgExprStatement(stmt);
             if (expr_stmt) {
                 expr_attr = examineExpr(expr_stmt->get_expression(), out);
+                expr_attr->labout = in1->labin;
                 /* The bool-expr code has already stored in expr_attr->code */
 
                 /*
