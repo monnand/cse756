@@ -189,7 +189,11 @@ void examineType(SgType *type, ostream &out) {
     out << ss1.str();
 }
 
-SynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &out, InheritAttr *inattr = NULL) {
+SynAttr *examineScopeStatement(SgScopeStatement* scope, 
+        string name, 
+        ostream &out, 
+        InheritAttr *inattr = NULL,
+        bool unblock = false) {
     SgSymbolTable* symbol_table = scope->get_symbol_table();
     set<SgNode*> symbol_nodes = symbol_table->get_symbols();
     set<SgNode*>::const_iterator symbol_iter;
@@ -248,10 +252,15 @@ SynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &ou
     }
 
     expr_attr = new SynAttr();
-    expr_attr->code << "{" << endl;
-    ret->output_tmp_decls(expr_attr->code);
-    expr_attr->code << ret->code.str();
-    expr_attr->code << "}" << endl;
+    if (!unblock) {
+        expr_attr->code << "{" << endl;
+        ret->output_tmp_decls(expr_attr->code);
+        expr_attr->code << ret->code.str();
+        expr_attr->code << "}" << endl;
+    } else {
+        expr_attr->union_tmp_decls(ret);
+        expr_attr->code << ret->code.str();
+    }
     expr_attr->labout = ret->labout;
 
     delete ret;
