@@ -1358,7 +1358,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
         case V_SgBasicBlock:
         {
             SgScopeStatement *scope = isSgScopeStatement(stmt);
-            expr_attr = examineScopeStatement(scope, "scope", out, inattr);
+            expr_attr = examineScopeStatement(scope, "scope", out, inattr, true);
             break;
         }
         case V_SgIfStmt: 
@@ -1527,7 +1527,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             in1 = new InheritAttr();
 
             in1->labin = inattr->labin + 1;
-            int2lab(in1->labin, lab1);
+            int2lab(inattr->labin, lab1);
 
             attr1 = examineStatement(stmt, out, in1);
             expr_attr->union_tmp_decls(attr1);

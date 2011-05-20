@@ -50,6 +50,8 @@ clean		:
 			rm -f out*.c
 			rm $(BINARY_FILE)
 
+cleantest:
+	rm -f out*.c
 
 commitpj4: pretty.cpp
 	cp pretty.cpp intermediate1.cpp
