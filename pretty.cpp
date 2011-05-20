@@ -7,7 +7,24 @@ using namespace std;
 
 void examineType(SgType *type, ostream &out);
 
-class ExprSynAttr {
+class InheritAttr {
+    public:
+        /* First available lab */
+        int labin;
+        InheritAttr() {
+            labin = 0;
+        }
+        virtual ~InheritAttr() {
+        }
+};
+
+void int2lab(int lab, string &s) {
+    stringstream i;
+    i << "_l" << lab;
+    s = i.str();
+}
+
+class SynAttr {
     private:
         static int tmp_count;
         map<string, string> tmp_decls;
@@ -17,13 +34,18 @@ class ExprSynAttr {
         stringstream code;
         string type;
         SgType *sgtype;
+        int labout;
     public:
-        ExprSynAttr() {
+        SynAttr() {
             result_var = "";
             is_type_from_expr = false;
+            labout = 0;
         }
 
-        ExprSynAttr(SgExpression *expr) {
+        virtual ~SynAttr() {
+        }
+
+        SynAttr(SgExpression *expr) {
             if (NULL == expr) {
                 result_var = "";
                 is_type_from_expr = false;
@@ -44,7 +66,7 @@ class ExprSynAttr {
             out << endl;
         }
 
-        void cast_type(ExprSynAttr *a, ExprSynAttr *b) {
+        void cast_type(SynAttr *a, SynAttr *b) {
             if (is_type_from_expr)
                 return;
             if (a->type == b->type) {
@@ -56,7 +78,7 @@ class ExprSynAttr {
             }
         }
 
-        void basetype(ExprSynAttr *a) {
+        void basetype(SynAttr *a) {
             if (is_type_from_expr)
                 return;
             stringstream ts;
@@ -82,7 +104,7 @@ class ExprSynAttr {
             type = ts.str();
         }
 
-        void union_tmp_decls(ExprSynAttr *a, ExprSynAttr *b = NULL) {
+        void union_tmp_decls(SynAttr *a, SynAttr *b = NULL) {
             map<string, string>::iterator it;
             if (NULL == a)
                 return;
@@ -125,12 +147,12 @@ class ExprSynAttr {
         }
 };
 
-int ExprSynAttr::tmp_count = 0;        
+int SynAttr::tmp_count = 0;        
 
-ExprSynAttr *examineExpr(SgExpression *expr, ostream &out);
+SynAttr *examineExpr(SgExpression *expr, ostream &out);
 void examinePrimTypeName(SgType *type, ostream &out);
-ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out);
-ExprSynAttr *examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out);
+SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr = NULL);
+SynAttr *examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out);
 
 void examineType(SgType *type, ostream &out) {
     int nr_stars = 0;
@@ -167,7 +189,7 @@ void examineType(SgType *type, ostream &out) {
     out << ss1.str();
 }
 
-ExprSynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &out) {
+SynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &out, InheritAttr *inattr = NULL) {
     SgSymbolTable* symbol_table = scope->get_symbol_table();
     set<SgNode*> symbol_nodes = symbol_table->get_symbols();
     set<SgNode*>::const_iterator symbol_iter;
@@ -191,12 +213,12 @@ ExprSynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream
     */
 
     SgBasicBlock *body;
-    ExprSynAttr *expr_attr;
-    ExprSynAttr *ret;
+    SynAttr *expr_attr;
+    SynAttr *ret;
     stringstream fake;
     stringstream codestream;
 
-    ret = new ExprSynAttr();
+    ret = new SynAttr();
 
     if (scope->variantT() != V_SgBasicBlock) {
         out << "}" << endl;
@@ -213,18 +235,20 @@ ExprSynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream
             stmt_iter != stmt_list.end();
             stmt_iter++) {
         SgStatement *stmt = *stmt_iter;
-        expr_attr = examineStatement(stmt, out);
+        expr_attr = examineStatement(stmt, out, inattr);
         ret->union_tmp_decls(expr_attr);
         ret->code << expr_attr->code.str() << endl;
+        ret->labout = expr_attr->labout;
         delete expr_attr;
         out << endl;
     }
 
-    expr_attr = new ExprSynAttr();
+    expr_attr = new SynAttr();
     expr_attr->code << "{" << endl;
     ret->output_tmp_decls(expr_attr->code);
     expr_attr->code << ret->code.str();
     expr_attr->code << "}" << endl;
+    expr_attr->labout = ret->labout;
 
     delete ret;
 
@@ -245,7 +269,7 @@ ExprSynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream
 }
 
 /* code for += *= /= etc. */
-ExprSynAttr *binop_assign(ExprSynAttr *ret, ExprSynAttr *attr1, ExprSynAttr *attr2, const char *op) {
+SynAttr *binop_assign(SynAttr *ret, SynAttr *attr1, SynAttr *attr2, const char *op) {
     string tmp_name;
     string tmp_type;
     string tmp2_name;
@@ -272,7 +296,7 @@ ExprSynAttr *binop_assign(ExprSynAttr *ret, ExprSynAttr *attr1, ExprSynAttr *att
     return ret;
 }
 
-ExprSynAttr *binop_noassign(ExprSynAttr *ret, ExprSynAttr *attr1, ExprSynAttr *attr2, const char *op) {
+SynAttr *binop_noassign(SynAttr *ret, SynAttr *attr1, SynAttr *attr2, const char *op) {
     string tmp_name;
     string tmp_type;
     string tmp2_name;
@@ -301,7 +325,7 @@ ExprSynAttr *binop_noassign(ExprSynAttr *ret, ExprSynAttr *attr1, ExprSynAttr *a
     return ret;
 }
 
-ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
+SynAttr *examineExpr(SgExpression *expr, ostream &out) {
     stringstream ss1;
     stringstream ss2;
     stringstream ss3;
@@ -310,8 +334,8 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
     SgBinaryOp *binop;
     SgUnaryOp *unaryop;
     SgType *type;
-    ExprSynAttr *ret;
-    ExprSynAttr *attr1, *attr2;
+    SynAttr *ret;
+    SynAttr *attr1, *attr2;
     string tmp_name;
     string tmp_type;
 
@@ -321,7 +345,7 @@ ExprSynAttr *examineExpr(SgExpression *expr, ostream &out) {
     if (expr == NULL)
         return NULL;
 
-    ret = new ExprSynAttr(expr);
+    ret = new SynAttr(expr);
     attr1 = NULL;
     attr2 = NULL;
     switch(expr->variantT()) {
@@ -1162,11 +1186,12 @@ void examineInitializedName(SgInitializedName *name, ostream &out) {
 }
 
 
-ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
+SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) {
     SgExpression *expr;
     SgExprStatement *expr_stmt;
-    ExprSynAttr *expr_attr = NULL;
-    ExprSynAttr *attr1 = NULL;
+    SynAttr *expr_attr = NULL;
+    SynAttr *attr1 = NULL;
+    SynAttr *attr2 = NULL;
 
     stringstream fake;
     int i;
@@ -1181,7 +1206,8 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             expr_attr = examineExpr(expr_stmt->get_expression(), fake);
             //out << ";";
             if (NULL != expr_attr) {
-                expr_attr->output_comments(out);
+                if (NULL != inattr)
+                    expr_attr->labout = inattr->labin;
             }
             break;
         }
@@ -1189,24 +1215,30 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
         {
             SgVariableDeclaration *vardecl = isSgVariableDeclaration(stmt);
             expr_attr = examineVariableDeclaration(vardecl, out);
+            if (NULL != inattr)
+                expr_attr->labout = inattr->labin;
             break;
         }
         case V_SgBreakStmt:
         {
             out << "break;";
             expr_attr->code << "break;";
+            if (NULL != inattr)
+                expr_attr->labout = inattr->labin;
             break;
         }
         case V_SgContinueStmt:
         {
             out << "continue;";
             expr_attr->code << "continue;";
+            if (NULL != inattr)
+                expr_attr->labout = inattr->labin;
             break;
         }
         case V_SgReturnStmt:
         {
             SgReturnStmt *retstmt = isSgReturnStmt(stmt);
-            expr_attr = new ExprSynAttr();
+            expr_attr = new SynAttr();
             out << "return ";
             expr = retstmt->get_expression();
             if (expr) {
@@ -1221,6 +1253,8 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
                 expr_attr->code << expr_attr->result_var;
             }
             expr_attr->code << ";";
+            if (NULL != inattr)
+                expr_attr->labout = inattr->labin;
             break;
         }
         case V_SgForStatement:
@@ -1252,7 +1286,7 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             /* Loop body */
             stmt = forstmt->get_loop_body();
             expr_attr = examineStatement(stmt, fake);
-            attr1 = new ExprSynAttr();
+            attr1 = new SynAttr();
             attr1->code << head.str();
             if (!isSgScopeStatement(stmt)) {
                 attr1->code << "{" << endl;
@@ -1272,28 +1306,51 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
         case V_SgBasicBlock:
         {
             SgScopeStatement *scope = isSgScopeStatement(stmt);
-            expr_attr = examineScopeStatement(scope, "scope", out);
+            expr_attr = examineScopeStatement(scope, "scope", out, inattr);
             break;
         }
         case V_SgIfStmt: 
         {
             stringstream head;
             SgIfStmt *ifstmt = isSgIfStmt(stmt);
-            head << "if (";
+            InheritAttr *in1, *in2;
+            string lab1, lab2;
+
+            in1 = new InheritAttr();
+            
+            /* We need two label here in if-stmt */
+            in1->labin = inattr->labin + 2;
+
+
+            out << "if (";
+
             stmt = ifstmt->get_conditional();
             expr_stmt = isSgExprStatement(stmt);
             if (expr_stmt) {
-                attr1 = examineExpr(expr_stmt->get_expression(), head);
-                if (attr1 != NULL)
-                    delete attr1;
+                expr_attr = examineExpr(expr_stmt->get_expression(), out);
+                /* The bool-expr code has already stored in expr_attr->code */
+
+                /*
+                if (expr_attr != NULL)
+                    delete expr_attr;
+                */
             }
-            head << ")" << endl;
-            out << head.str();
+            out << ")" << endl;
+
+            /* Then let's test the boolean expression */
+            expr_attr->code << "if (" << expr_attr->result_var << ")" << endl;
+            int2lab(inattr->labin, lab1);
+            int2lab(inattr->labin + 1, lab2);
+
+            expr_attr->code << "goto " << lab1 << ";" << endl;
 
             /* True body */
             stmt = ifstmt->get_true_body();
-            expr_attr = examineStatement(stmt, fake);
-            attr1 = new ExprSynAttr();
+            attr1 = examineStatement(stmt, out, in1);
+            expr_attr->union_tmp_decls(attr1);
+            delete in1;
+            /*
+            attr1 = new SynAttr();
             attr1->code << head.str();
             if (!isSgScopeStatement(stmt)) {
                 attr1->code << "{" << endl;
@@ -1308,13 +1365,17 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             attr1 = NULL;
             out << head.str();
             out << fake.str();
+            */
+            expr_attr->labout = attr1->labout;
 
             /* False body */
             stmt = ifstmt->get_false_body();
             if (stmt) {
+                in2 = new InheritAttr();
+                in2->labin = attr1->labout;
                 out << endl << "else" << endl;
-                expr_attr->code << endl << "else" << endl;
-                attr1 = examineStatement(stmt, out);
+                attr2 = examineStatement(stmt, out, in2);
+                /*
                 if (!isSgScopeStatement(stmt)) {
                     expr_attr->code << "{" << endl;
                 }
@@ -1323,8 +1384,20 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
                 if (!isSgScopeStatement(stmt)) {
                     expr_attr->code << "}" << endl;
                 }
-            }
+                */
 
+                expr_attr->union_tmp_decls(attr2);
+                expr_attr->code << attr2->code.str();
+                expr_attr->labout = attr2->labout;
+                delete in2;
+                delete attr2;
+            }
+            expr_attr->code << "goto " << lab2 << ";" << endl;
+            expr_attr->code << lab1 << ":";
+            expr_attr->code << attr1->code.str();
+            expr_attr->code << lab2 << ":;" << endl;
+
+            delete attr1;
             break;
         }
         case V_SgWhileStmt:
@@ -1343,7 +1416,7 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             if (!isSgScopeStatement(stmt)) {
                 head << "{" << endl;
             }
-            expr_attr = new ExprSynAttr();
+            expr_attr = new SynAttr();
             expr_attr->code << head.str();
 
             /* Loop Body */
@@ -1370,7 +1443,7 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
             if (!isSgScopeStatement(stmt)) {
                 head << "{" << endl;
             }
-            expr_attr = new ExprSynAttr();
+            expr_attr = new SynAttr();
             expr_attr->code << head.str();
             attr1 = examineStatement(stmt, out);
 
@@ -1399,12 +1472,12 @@ ExprSynAttr *examineStatement(SgStatement *stmt, ostream &out) {
     return expr_attr;
 }
 
-ExprSynAttr *examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
+SynAttr *examineVariableDeclaration(SgVariableDeclaration* decl, ostream &out) {
   SgInitializedNamePtrList& name_list = decl->get_variables();
   SgInitializedNamePtrList::const_iterator name_iter;
-  ExprSynAttr *ret = NULL;
-  ExprSynAttr *gc = NULL;
-  ret = new ExprSynAttr();
+  SynAttr *ret = NULL;
+  SynAttr *gc = NULL;
+  ret = new SynAttr();
   for (name_iter = name_list.begin(); 
        name_iter != name_list.end(); 
        name_iter++) {
@@ -1480,16 +1553,16 @@ ExprSynAttr *examineVariableDeclaration(SgVariableDeclaration* decl, ostream &ou
   }
 }
 
-void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
+SynAttr *examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out, InheritAttr *inattr = NULL) {
     SgSymbol* symbol = decl->get_symbol_from_symbol_table();
     SgFunctionDefinition* def = decl->get_definition();
 
-    ExprSynAttr *attr;
+    SynAttr *attr;
     stringstream fake;
 
     /* We don't want to output the function withou definition */
     if (NULL == symbol || NULL == def)
-        return;
+        return NULL;
     SgType *ret_type = decl->get_orig_return_type();
     examineType(ret_type, out);
 
@@ -1510,9 +1583,9 @@ void examineFunctionDeclaration(SgFunctionDeclaration* decl, ostream &out) {
     out << endl;
 
     SgBasicBlock* body = def->get_body();
-    attr = examineScopeStatement(body,symbol->get_name().getString(), fake);
+    attr = examineScopeStatement(body,symbol->get_name().getString(), fake, inattr);
     out << attr->code.str();
-    delete attr;
+    return attr;
 }
 
 string prettyPrint(SgProject* project) {
@@ -1521,7 +1594,10 @@ string prettyPrint(SgProject* project) {
   stringstream rets;
   stringstream fake;
 
-  ExprSynAttr *attr1, *attr2;
+  SynAttr *attr1, *attr2;
+  InheritAttr *inattr;
+  inattr = new InheritAttr();
+  inattr->labin = 0;
   for (file_iter = file_list.begin(); 
        file_iter != file_list.end(); 
        file_iter++) {
@@ -1543,7 +1619,9 @@ string prettyPrint(SgProject* project) {
 	decl_iter++) {
       SgDeclarationStatement* decl = *decl_iter;
       if (isSgFunctionDeclaration(decl))  {
-	    examineFunctionDeclaration(isSgFunctionDeclaration(decl), rets);
+	    attr1 = examineFunctionDeclaration(isSgFunctionDeclaration(decl), rets, inattr);
+        if (NULL != attr1)
+            inattr->labin = attr1->labout;
       }
       if (isSgVariableDeclaration(decl)) {
 	examineVariableDeclaration(isSgVariableDeclaration(decl), rets);
@@ -1551,6 +1629,7 @@ string prettyPrint(SgProject* project) {
         }
     }
   }
+  delete inattr;
   return rets.str();
 }
 
