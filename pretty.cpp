@@ -215,10 +215,13 @@ SynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &ou
     SgBasicBlock *body;
     SynAttr *expr_attr;
     SynAttr *ret;
+    InheritAttr *in1;
     stringstream fake;
     stringstream codestream;
 
     ret = new SynAttr();
+    in1 = new InheritAttr();
+    in1->labin = inattr->labin;
 
     if (scope->variantT() != V_SgBasicBlock) {
         out << "}" << endl;
@@ -235,10 +238,11 @@ SynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &ou
             stmt_iter != stmt_list.end();
             stmt_iter++) {
         SgStatement *stmt = *stmt_iter;
-        expr_attr = examineStatement(stmt, out, inattr);
+        expr_attr = examineStatement(stmt, out, in1);
         ret->union_tmp_decls(expr_attr);
         ret->code << expr_attr->code.str() << endl;
         ret->labout = expr_attr->labout;
+        in1->labin = ret->labout;
         delete expr_attr;
         out << endl;
     }
@@ -251,6 +255,7 @@ SynAttr *examineScopeStatement(SgScopeStatement* scope, string name, ostream &ou
     expr_attr->labout = ret->labout;
 
     delete ret;
+    delete in1;
 
     out << "}" << endl;
     return expr_attr;
@@ -1192,6 +1197,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
     SynAttr *expr_attr = NULL;
     SynAttr *attr1 = NULL;
     SynAttr *attr2 = NULL;
+    InheritAttr *in1, *in2;
 
     stringstream fake;
     int i;
@@ -1313,7 +1319,6 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
         {
             stringstream head;
             SgIfStmt *ifstmt = isSgIfStmt(stmt);
-            InheritAttr *in1, *in2;
             string lab1, lab2;
 
             in1 = new InheritAttr();
@@ -1403,23 +1408,49 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
         case V_SgWhileStmt:
         {
             stringstream head;
+            string lab1, lab2;
             SgWhileStmt *whilestmt = isSgWhileStmt(stmt);
+            expr_attr = new SynAttr();
+            in1 = new InheritAttr();
+            in1->labin = inattr->labin + 2;
+
+            int2lab(inattr->labin, lab1);
+            int2lab(inattr->labin + 1, lab2);
+
+            /* The condition stmt is stored in expr_stmt */
             expr_stmt = isSgExprStatement(whilestmt->get_condition());
-            head << "while (";
+
+            out << "while (";
             if (expr_stmt) {
-                attr1 = examineExpr(expr_stmt->get_expression(), head);
-                if (NULL != attr1)
+                attr1 = examineExpr(expr_stmt->get_expression(), out);
+                if (NULL != attr1) {
+                    expr_attr->union_tmp_decls(attr1);
+                    expr_attr->code << lab1 << ": ";
+                    expr_attr->code << attr1->code.str();
+                    expr_attr->code << "if (!" << attr1->result_var << ")" << endl;
+                    expr_attr->code << "goto " << lab2 << ";" << endl;
                     delete attr1;
+                }
             }
-            out << head.str() << ")" << endl;
-            head << ")" << endl;
+            out << ")" << endl;
+
+            stmt = whilestmt->get_body();
+            attr1 = examineStatement(stmt, out, in1);
+            if (NULL != attr1) {
+                expr_attr->union_tmp_decls(attr1);
+                expr_attr->code << attr1->code.str();
+                expr_attr->code << "goto " << lab1 << ";" << endl;
+                expr_attr->code << lab2 << ":;" << endl;
+                delete attr1;
+            }
+
+            /*
             if (!isSgScopeStatement(stmt)) {
                 head << "{" << endl;
             }
             expr_attr = new SynAttr();
             expr_attr->code << head.str();
 
-            /* Loop Body */
             stmt = whilestmt->get_body();
             attr1 = examineStatement(stmt, out);
 
@@ -1430,6 +1461,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             }
 
             delete attr1;
+            */
             break;
         }
         case V_SgDoWhileStmt:
