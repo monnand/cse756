@@ -1266,34 +1266,71 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
         case V_SgForStatement:
         {
             stringstream head;
-            head << "for (";
+            string lab1, lab2;
+            out << "for (";
             SgForStatement *forstmt = isSgForStatement(stmt);
             SgStatementPtrList &init_stmt_list = forstmt->get_init_stmt();
             SgStatementPtrList::const_iterator init_stmt_iter;
+
+            expr_attr = new SynAttr();
+            in1 = new InheritAttr();
+            in1->labin = inattr->labin + 2;
+
+            int2lab(inattr->labin, lab1);
+            int2lab(inattr->labin + 1, lab2);
+
             for (init_stmt_iter = init_stmt_list.begin();
                     init_stmt_iter != init_stmt_list.end();
                     init_stmt_iter++) {
                 stmt = *init_stmt_iter;
                 if (init_stmt_iter != init_stmt_list.begin())
-                    head << ", ";
+                    out << ", ";
                 expr_stmt = isSgExprStatement(stmt);
-                if (expr_stmt)
-                    examineExpr(expr_stmt->get_expression(), head);
+                if (expr_stmt) {
+                    attr1 = examineExpr(expr_stmt->get_expression(), out);
+                    expr_attr->union_tmp_decls(attr1);
+                    expr_attr->code << attr1->code.str();
+                    delete attr1;
+                    attr1 = NULL;
+                }
             }
-            head << "; ";
+            out << "; ";
+
+            expr_attr->code << lab1 << ":";
+            
+            /* Loop Condition */
             expr_stmt = isSgExprStatement(forstmt->get_test());
-            if (expr_stmt)
-                examineExpr(expr_stmt->get_expression(), head);
-            head << "; ";
+            if (expr_stmt) {
+                attr1 = examineExpr(expr_stmt->get_expression(), out);
+                expr_attr->union_tmp_decls(attr1);
+                expr_attr->code << attr1->code.str();
+
+                expr_attr->code << "if (!" << attr1->result_var << ")" << endl;
+                expr_attr->code << "goto " << lab2 << ";" << endl;
+                delete attr1;
+                attr1 = NULL;
+            }
+            out << "; ";
             expr = forstmt->get_increment();
-            examineExpr(expr, head);
-            head << ")" << endl;
+            attr2 = examineExpr(expr, out);
+            expr_attr->union_tmp_decls(attr2);
+            out<< ")" << endl;
 
             /* Loop body */
             stmt = forstmt->get_loop_body();
-            expr_attr = examineStatement(stmt, fake);
-            attr1 = new SynAttr();
-            attr1->code << head.str();
+            attr1 = examineStatement(stmt, out, in1);
+            expr_attr->code << attr1->code.str();
+            expr_attr->union_tmp_decls(attr1);
+
+            expr_attr->code << attr2->code.str();
+            expr_attr->code << "goto " << lab1 << ";" << endl;
+            expr_attr->code << lab2 <<":;" << endl;
+            delete attr2;
+            delete in1;
+            attr2 = NULL;
+            in1 = NULL;
+
+            /*
             if (!isSgScopeStatement(stmt)) {
                 attr1->code << "{" << endl;
             }
@@ -1305,8 +1342,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             delete expr_attr;
             expr_attr = attr1;
             attr1 = NULL;
-            out << head.str();
-            out << fake.str();
+            */
             break;
         }
         case V_SgBasicBlock:
@@ -1430,6 +1466,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
                     expr_attr->code << "if (!" << attr1->result_var << ")" << endl;
                     expr_attr->code << "goto " << lab2 << ";" << endl;
                     delete attr1;
+                    attr1 = NULL;
                 }
             }
             out << ")" << endl;
