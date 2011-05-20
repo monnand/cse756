@@ -56,4 +56,8 @@ commitpj4: pretty.cpp
 	submit c756aa lab4 intermediate1.cpp
 	diff pretty.cpp intermediate1.cpp
 
+commitpj5: pretty.cpp
+	cp pretty.cpp intermediate2.cpp
+	submit c756aa lab5 intermediate2.cpp
+	diff pretty.cpp intermediate2.cpp
 
