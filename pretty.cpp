@@ -1325,6 +1325,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             expr_attr->code << attr2->code.str();
             expr_attr->code << "goto " << lab1 << ";" << endl;
             expr_attr->code << lab2 <<":;" << endl;
+            expr_attr->labout = attr1->labout;
             delete attr2;
             delete in1;
             attr2 = NULL;
@@ -1361,6 +1362,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             
             /* We need two label here in if-stmt */
             in1->labin = inattr->labin + 2;
+            expr_attr->labout = in1->labin + 2;
 
 
             out << "if (";
@@ -1449,6 +1451,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             expr_attr = new SynAttr();
             in1 = new InheritAttr();
             in1->labin = inattr->labin + 2;
+            expr_attr->labout = in1->labin + 2;
 
             int2lab(inattr->labin, lab1);
             int2lab(inattr->labin + 1, lab2);
@@ -1478,6 +1481,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
                 expr_attr->code << attr1->code.str();
                 expr_attr->code << "goto " << lab1 << ";" << endl;
                 expr_attr->code << lab2 << ":;" << endl;
+                expr_attr->labout = attr1->labout;
                 delete attr1;
             }
 
