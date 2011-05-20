@@ -1467,10 +1467,37 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
         case V_SgDoWhileStmt:
         {
             stringstream head;
+            string lab1, lab2;
             SgDoWhileStmt *dowhilestmt = isSgDoWhileStmt(stmt);
             expr_stmt = isSgExprStatement(dowhilestmt->get_condition());
             stmt = dowhilestmt->get_body();
             out << "do";
+            
+            expr_attr = new SynAttr();
+            in1 = new InheritAttr();
+
+            in1->labin = inattr->labin + 1;
+            int2lab(in1->labin, lab1);
+
+            attr1 = examineStatement(stmt, out, in1);
+            expr_attr->union_tmp_decls(attr1);
+            expr_attr->labout = attr1->labout;
+            delete in1;
+
+            expr_attr->code << lab1 << ": ";
+            expr_attr->code << attr1->code.str();
+            out << " while (";
+            if (expr_stmt) {
+                attr1 = examineExpr(expr_stmt->get_expression(), out);
+                expr_attr->union_tmp_decls(attr1);
+                expr_attr->code << attr1->code.str();
+                expr_attr->code << "if (" << attr1->result_var << ")" << endl;
+            }
+            expr_attr->code << "goto " << lab1 << ";" << endl;
+            out << ");" << endl;
+
+
+            /*
             head << "do" << endl;
             if (!isSgScopeStatement(stmt)) {
                 head << "{" << endl;
@@ -1497,6 +1524,7 @@ SynAttr *examineStatement(SgStatement *stmt, ostream &out, InheritAttr *inattr) 
             }
             out << ");" << endl;
             expr_attr->code << ");" << endl;
+            */
             break;
         }
     }
