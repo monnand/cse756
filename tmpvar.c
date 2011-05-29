@@ -17,6 +17,35 @@ int main() {
     else
         a = aarr[3];
 
+
+	if (a && 3)
+		b = a+1;
+
+
+	if (a == b)
+		b = a+0;
+
+	if (a != b)
+		b = a + 1;
+
+	if (a > b)
+		b = a + 2;
+
+	if (a >= b)
+		b = a + 3;
+
+	if (a <= b)
+		b = a + 4;
+
+	if (a < b)
+		b = a + 5;
+
+	if (a || b)
+		b = a + 6;
+
+	if(!(a+b))
+		b = a + 7;	
+	
     a = 0;
     while (a < 100) {
         b = a + 1;
@@ -25,4 +54,6 @@ int main() {
         kk = b--;
         jj = ++b;
     }
+
+    return jj;
 }
