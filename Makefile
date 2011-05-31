@@ -14,7 +14,7 @@
 
 SOURCE_FILES	=	\
 			main.cpp	\
-			pretty.cpp
+			cfg.cpp
 
 BINARY_FILE	=	mycompiler
 
@@ -62,4 +62,7 @@ commitpj5: pretty.cpp
 	cp pretty.cpp intermediate2.cpp
 	submit c756aa lab5 intermediate2.cpp
 	diff pretty.cpp intermediate2.cpp
+
+commitpj6: cfg.cpp
+	submit c756aa lab6 cfg.cpp
 
