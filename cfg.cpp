@@ -699,7 +699,7 @@ bool NatrualLoop::is_nested_in(NatrualLoop &outter) {
 
 void NatrualLoop::info(ostream &out) {
     set<BasicBlock *>::iterator loop_elem;
-    out << "  loop = {" ;
+    out << "loop = {" ;
     for(loop_elem = loop_set.begin(); loop_elem != loop_set.end(); loop_elem++) {
         out << (*loop_elem)->name() << ", ";
     }
@@ -767,9 +767,12 @@ string prettyPrint(SgProject* project) {
     cout << "Loops: " << endl;
     for(loop_iter = loops.begin(); loop_iter != loops.end(); loop_iter++) {
         loop = *loop_iter;
+        cout << "  ";
         loop->info(cout);
         for(loop_iter2 = loops.begin(); loop_iter2 != loops.end(); loop_iter2++) {
             NatrualLoop *loop2 = *loop_iter2;
+            if (loop == loop2)
+                continue;
             if (loop->is_nested_in(*loop2)) {
                 cout << "    Nested in ";
                 loop2->info(cout);
