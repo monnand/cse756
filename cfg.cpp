@@ -3,6 +3,7 @@
 #include <map>
 #include <sstream>
 #include <algorithm>
+#include <fstream>
 
 using namespace std;
 
@@ -36,10 +37,11 @@ class Instruction {
             this->id = id;
         }
 
-        bool is_jmp() { return type == COND_JMP_INST || type == UNCOND_JMP_INST; }
+        bool is_jmp() { return type == COND_JMP_INST || type == UNCOND_JMP_INST || type == RETURN_INST; }
         bool is_cond_jmp() { return type == COND_JMP_INST; }
         bool is_uncond_jmp() { return type == UNCOND_JMP_INST; }
         bool is_valid() { return type >= COND_JMP_INST && type < NR_INST_TYPE; }
+        bool is_return() { return type == RETURN_INST; }
 
         int get_id() { return id; }
         void set_id(int id) { this->id = id; }
@@ -168,6 +170,7 @@ class BasicBlock {
         list<Instruction *> inst_list;
         static int nr_blk;
         int id;
+        Instruction *jmp_inst;
 
         set<string> dst_labs;
         set<string> labs;
@@ -179,13 +182,17 @@ class BasicBlock {
         BasicBlock() {
             id = nr_blk;
             nr_blk++;
+            jmp_inst = NULL;
         }
         BasicBlock(int id) {
             if (id == ENTRY_BLOCK || id == EXIT_BLOCK)
                 this->id = id;
+            jmp_inst = NULL;
         }
         virtual ~BasicBlock() {}
         int add_instruction(Instruction *inst);
+        int nr_instructions() { return inst_list.size(); }
+        bool to_exit() { NULL != jmp_inst && jmp_inst->is_return(); }
 
         set<BasicBlock *> &get_successors() { return successors; }
         set<BasicBlock *> &get_predecessors() { return predecessors; }
@@ -207,8 +214,9 @@ class BasicBlock {
         }
 
         bool point_to(BasicBlock *blk);
-        BasicBlock *append_exit() {
-            BasicBlock *exitblk = new BasicBlock(EXIT_BLOCK);
+        BasicBlock *append_exit(BasicBlock *exitblk = NULL) {
+            if (NULL == exitblk)
+                exitblk = new BasicBlock(EXIT_BLOCK);
             successors.insert(exitblk);
             exitblk->predecessors.insert(this);
             return exitblk;
@@ -249,14 +257,23 @@ bool BasicBlock::point_to(BasicBlock *blk) {
         else
             ret = false;
     }
-    
-    if (id + 1 == blk->id)
+
+    if (blk->id == EXIT_BLOCK && to_exit())
         ret = true;
-    for (iter = dst_labs.begin(); iter != dst_labs.end(); iter++) {
-        test = blk->labs.find(*iter);
-        if (test != blk->labs.end()) {
-            ret = true;
-            break;
+    
+    if (!ret) {
+        /* current block is the code before blk */
+        if (id + 1 == blk->id) {
+            /* There is no jump or only conditional jump in current block */
+            if (NULL == jmp_inst || !jmp_inst->is_uncond_jmp())
+                ret = true;
+        }
+        for (iter = dst_labs.begin(); !ret && iter != dst_labs.end(); iter++) {
+            test = blk->labs.find(*iter);
+            if (test != blk->labs.end()) {
+                ret = true;
+                break;
+            }
         }
     }
 
@@ -277,9 +294,12 @@ int BasicBlock::add_instruction(Instruction *inst) {
         labs.insert(l);
     }
 
-    if (inst->is_jmp()) {
-        string dst = inst->get_dst();
-        dst_labs.insert(dst);
+    if (inst->is_jmp() || inst->is_return()) {
+        if (!inst->is_return()) {
+            string dst = inst->get_dst();
+            dst_labs.insert(dst);
+        }
+        jmp_inst = inst;
     }
 
     inst_list.push_back(inst);
@@ -317,6 +337,7 @@ class InstructionList {
         bool is_leader(Instruction *inst);
         int build_leaders();
         int build_basic_blocks(list<BasicBlock *> &blist);
+        int nr_instructions() { return ilist.size(); }
 };
 
 int InstructionList::build_basic_blocks(list<BasicBlock *> &blist) {
@@ -400,7 +421,6 @@ Instruction *InstructionList::append(SgStatement *stmt) {
         }
         case V_SgReturnStmt:
         {
-            labs.clear();
             inst = new ReturnInstruction(stmt);
             break;
         }
@@ -436,7 +456,7 @@ Instruction *InstructionList::append(SgStatement *stmt) {
             jmp_next.push_back(inst->get_id());
             is_jmp_next = false;
         }
-        if (inst->is_jmp()) {
+        if (inst->is_jmp() && !inst->is_return()) {
             is_jmp_next = true;
             string dst = inst->get_dst();
             jmp_dsts.push_back(dst);
@@ -460,20 +480,41 @@ class ControlFlowGraph {
         set<BasicBlock *> blklist;
         BasicBlock *entry;
         BasicBlock *exit;
+        int total_nr_edges;
 
         int dfs_traverse_r(GraphTraverser &tr, BasicBlock *start, bool backward, set<int> *visited);
     public:
 
+        int nr_blocks() { return blklist.size(); }
+        int nr_edges() { return total_nr_edges; }
         BasicBlock *get_entry() { return entry; }
         BasicBlock *get_exit() { return exit; }
         set<BasicBlock *> &get_blocks() { return blklist; }
 
-        ControlFlowGraph() { entry = NULL; exit = NULL; }
+        ControlFlowGraph() { entry = NULL; exit = NULL; total_nr_edges = 0; }
         virtual ~ControlFlowGraph();
         int build_graph(list<BasicBlock *> &blist);
 
+        void to_dot(ostream &out);
+
         int dfs_traverse(GraphTraverser &tr, BasicBlock *start = NULL, bool backward = false, set<int> *visited = NULL);
 };
+
+void ControlFlowGraph::to_dot(ostream &out)  {
+    out << "digraph {" << endl;
+
+    set<BasicBlock *>::iterator i;
+    set<BasicBlock *>::iterator j;
+
+    for (i = blklist.begin(); i != blklist.end(); i++) {
+        BasicBlock *b1 = *i;
+        set<BasicBlock *> &adjs = b1->get_successors();
+        for (j = adjs.begin(); j != adjs.end(); j++) {
+            out << b1->name() << "->" << (*j)->name() << endl;
+        }
+    }
+    out << "}" << endl;
+}
 
 int ControlFlowGraph::dfs_traverse(GraphTraverser &tr, BasicBlock *start, bool backward, set<int> *visited) {
     if (NULL == start) {
@@ -543,10 +584,13 @@ int ControlFlowGraph::build_graph(list<BasicBlock *> &blist) {
     this->entry = entry;
 
     blist.push_front(entry);
+    total_nr_edges = 0;
     for(iter = blist.begin(); iter != blist.end(); iter++) {
         BasicBlock *blk = *iter;
         for (j = blist.begin(); j != blist.end(); j++) {
-            blk->point_to(*j);
+            if(blk->point_to(*j)) {
+                total_nr_edges++;
+            }
         }
         blklist.insert(blk);
 
@@ -558,6 +602,7 @@ int ControlFlowGraph::build_graph(list<BasicBlock *> &blist) {
     exit = exit->append_exit();
     this->exit = exit;
     blklist.insert(exit);
+    total_nr_edges++;
     return 0;
 }
 
@@ -674,6 +719,7 @@ class NatrualLoop {
     public:
         NatrualLoop(ControlFlowGraph &cfg, CFGEdge &backedge);
         void info(ostream &out);
+        set<BasicBlock *> &get_blocks() { return loop_set; }
 
         bool is_nested_in(NatrualLoop &outter);
 };
@@ -709,6 +755,7 @@ void NatrualLoop::info(ostream &out) {
 
 string prettyPrint(SgProject* project) {
     string ret = "";
+    stringstream out;
     SgFilePtrList& file_list = project->get_fileList();
     SgFilePtrList::const_iterator file_iter;
 
@@ -741,44 +788,125 @@ string prettyPrint(SgProject* project) {
 
     /* Analyze the list of instructions */
     ControlFlowGraph *cfg = build_cfg(ilist);
+
+    /*
+    ofstream fout("cfg.dot");
+    cfg->to_dot(fout);
+    fout.close();
+    */
+
+    out << "CFG NODES:" << cfg->nr_blocks() << endl;
+    out << "CFG EDGES:" << cfg->nr_edges() << endl;
+    out << "TOTAL INSTRUCTIONS:" << ilist->nr_instructions() << endl;
     list<CFGEdge> bedges;
 
     find_back_edges(cfg, bedges);
     list<CFGEdge>::iterator iter;
+    set<BasicBlock *> loop_blocks;
 
+    /*
     cout << "Backedges: " << endl;
+    */
     NatrualLoop *loop = NULL;
     list<NatrualLoop *> loops;
     for (iter = bedges.begin(); iter != bedges.end(); iter++) {
+        /*
         BasicBlock *from, *to;
         from = iter->first;
         cout << from->name() << "->";
 
         to = iter->second;
         cout << to->name() << ";" << endl;
+        */
 
         loop = new NatrualLoop(*cfg, *iter);
         loops.push_back(loop);
+        set<BasicBlock *> &blocks_in_one_loop = loop->get_blocks();
+        set<BasicBlock *>::iterator blk_iter;
+        /*
+        cout << "Loop:";
+        */
+        for (blk_iter = blocks_in_one_loop.begin(); blk_iter != blocks_in_one_loop.end(); blk_iter++) {
+            BasicBlock *b = *blk_iter;
+            loop_blocks.insert(b);
+
+            /*
+            cout << " " << b->name();
+            */
+        }
+        /*
+        cout << endl;
+        */
     }
+
+    out << "LOOPS:" << loops.size() << endl;
+
+    int nr_inst = 0;
+    set<BasicBlock *>::iterator blk_iter;
+    for (blk_iter = loop_blocks.begin(); blk_iter != loop_blocks.end(); blk_iter++) {
+        BasicBlock *b = *blk_iter;
+
+        /*
+        cout << "Block " << b->name() << " is in a loop";
+        cout << " Nr instructions: " << b->nr_instructions() << endl;
+        */
+        nr_inst += (*blk_iter)->nr_instructions();
+    }
+
+    /*
+    set<BasicBlock *> &all_blocks = cfg->get_blocks();
+    for (blk_iter = all_blocks.begin(); blk_iter != all_blocks.end(); blk_iter++) {
+        BasicBlock *b = *blk_iter;
+
+        cout << "Block " << b->name() << " has";
+        cout << " Nr instructions: " << b->nr_instructions() << endl;
+    }
+    */
+
+    out << "INSTRUCTIONS IN LOOPS:" << nr_inst << endl;
 
     list<NatrualLoop *>::iterator loop_iter;
     list<NatrualLoop *>::iterator loop_iter2;
 
+    /*
     cout << "Loops: " << endl;
+    */
+
+    map<int, int> nest_lev_nr_loops;
     for(loop_iter = loops.begin(); loop_iter != loops.end(); loop_iter++) {
         loop = *loop_iter;
+        /*
         cout << "  ";
         loop->info(cout);
+        */
+        
+        int nest_lev = 0;
         for(loop_iter2 = loops.begin(); loop_iter2 != loops.end(); loop_iter2++) {
             NatrualLoop *loop2 = *loop_iter2;
             if (loop == loop2)
                 continue;
             if (loop->is_nested_in(*loop2)) {
+                /*
                 cout << "    Nested in ";
+                */
+                nest_lev++;
+                /*
                 loop2->info(cout);
+                */
             }
         }
+
+        map<int, int>::iterator test = nest_lev_nr_loops.find(nest_lev);
+        if (test == nest_lev_nr_loops.end())
+            nest_lev_nr_loops[nest_lev] = 0;
+        nest_lev_nr_loops[nest_lev] += 1;
     }
+
+    map<int, int>::iterator nest_iter = nest_lev_nr_loops.begin();
+    for (; nest_iter != nest_lev_nr_loops.end(); nest_iter++) {
+        out << "LOOPS WITH DEPTH " << nest_iter->first << ":" << nest_iter->second << endl;
+    }
+
 
     /*
     set<BasicBlock *> &blks = cfg->get_blocks();
@@ -793,6 +921,7 @@ string prettyPrint(SgProject* project) {
     }
     */
 
+    ret = out.str();
     return ret;
 }
 

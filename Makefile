@@ -53,6 +53,12 @@ clean		:
 cleantest:
 	rm -f out*.c
 
+cfg.dot: mycompiler cfg_test.c
+	./mycompiler cfg_test.c
+
+cfg.png: cfg.dot
+	dot -Tpng cfg.dot > cfg.png
+
 commitpj4: pretty.cpp
 	cp pretty.cpp intermediate1.cpp
 	submit c756aa lab4 intermediate1.cpp
