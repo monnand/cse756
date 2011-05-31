@@ -2,6 +2,7 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 
@@ -450,6 +451,8 @@ class GraphTraverser {
     public:
         virtual int visit_node(BasicBlock *blk) { return 0; }
         virtual int visit_edge(BasicBlock *from, BasicBlock *to) { return 0; }
+        GraphTraverser() {}
+        virtual ~GraphTraverser() {}
 };
 
 class ControlFlowGraph {
@@ -458,7 +461,7 @@ class ControlFlowGraph {
         BasicBlock *entry;
         BasicBlock *exit;
 
-        int dfs_traverse_r(GraphTraverser *tr, BasicBlock *start, bool backward, set<int> *visited);
+        int dfs_traverse_r(GraphTraverser &tr, BasicBlock *start, bool backward, set<int> *visited);
     public:
 
         BasicBlock *get_entry() { return entry; }
@@ -469,10 +472,10 @@ class ControlFlowGraph {
         virtual ~ControlFlowGraph();
         int build_graph(list<BasicBlock *> &blist);
 
-        int dfs_traverse(GraphTraverser *tr, BasicBlock *start = NULL, bool backward = false, set<int> *visited = NULL);
+        int dfs_traverse(GraphTraverser &tr, BasicBlock *start = NULL, bool backward = false, set<int> *visited = NULL);
 };
 
-int ControlFlowGraph::dfs_traverse(GraphTraverser *tr, BasicBlock *start, bool backward, set<int> *visited) {
+int ControlFlowGraph::dfs_traverse(GraphTraverser &tr, BasicBlock *start, bool backward, set<int> *visited) {
     if (NULL == start) {
         if (backward)
             start = exit;
@@ -486,12 +489,12 @@ int ControlFlowGraph::dfs_traverse(GraphTraverser *tr, BasicBlock *start, bool b
     return dfs_traverse_r(tr, start, backward, visited);
 }
 
-int ControlFlowGraph::dfs_traverse_r(GraphTraverser *tr, BasicBlock *start, bool backward, set<int> *visited) {
+int ControlFlowGraph::dfs_traverse_r(GraphTraverser &tr, BasicBlock *start, bool backward, set<int> *visited) {
     set<int>::iterator test;
     test = visited->find(start->get_id());
     int i;
     if (test == visited->end()) {
-        i = tr->visit_node(start);
+        i = tr.visit_node(start);
         visited->insert(start->get_id());
         if (i != 0)
             return i;
@@ -511,7 +514,7 @@ int ControlFlowGraph::dfs_traverse_r(GraphTraverser *tr, BasicBlock *start, bool
 
         /* We haven't visit this node */
         if (test == visited->end()) {
-            i = tr->visit_edge(start, blk);
+            i = tr.visit_edge(start, blk);
             if (i != 0)
                 return i;
 
@@ -651,7 +654,58 @@ ControlFlowGraph *build_cfg(InstructionList *ilist) {
     return cfg;
 }
 
+class NodeCollector : public GraphTraverser {
+    private:
+        set<BasicBlock *> *visited;
+    public:
+        NodeCollector(set<BasicBlock *> &v) {
+            visited = &v;
+        }
+        virtual ~NodeCollector() {}
+        virtual int visit_node(BasicBlock *blk) {
+            visited->insert(blk);
+            return 0;
+        }
+};
 
+class NatrualLoop {
+    private:
+        set<BasicBlock *> loop_set;
+    public:
+        NatrualLoop(ControlFlowGraph &cfg, CFGEdge &backedge);
+        void info(ostream &out);
+
+        bool is_nested_in(NatrualLoop &outter);
+};
+
+NatrualLoop::NatrualLoop(ControlFlowGraph &cfg, CFGEdge &backedge) {
+    BasicBlock *from = backedge.first;
+    BasicBlock *to = backedge.second;
+    set<int> visited;
+    visited.insert(to->get_id());
+
+    loop_set.insert(to);
+
+    NodeCollector c(loop_set);
+    cfg.dfs_traverse(c, from, true, &visited);
+}
+
+bool NatrualLoop::is_nested_in(NatrualLoop &outter) {
+    bool test;
+    test = includes(outter.loop_set.begin(), outter.loop_set.end(),
+            loop_set.begin(), loop_set.end());
+    return test;
+}
+
+void NatrualLoop::info(ostream &out) {
+    set<BasicBlock *>::iterator loop_elem;
+    out << "  loop = {" ;
+    for(loop_elem = loop_set.begin(); loop_elem != loop_set.end(); loop_elem++) {
+        out << (*loop_elem)->name() << ", ";
+    }
+    out << "}" << endl;
+}
+ 
 
 string prettyPrint(SgProject* project) {
     string ret = "";
@@ -693,13 +747,34 @@ string prettyPrint(SgProject* project) {
     list<CFGEdge>::iterator iter;
 
     cout << "Backedges: " << endl;
+    NatrualLoop *loop = NULL;
+    list<NatrualLoop *> loops;
     for (iter = bedges.begin(); iter != bedges.end(); iter++) {
-        BasicBlock *blk;
-        blk = iter->first;
-        cout << blk->name() << "->";
+        BasicBlock *from, *to;
+        from = iter->first;
+        cout << from->name() << "->";
 
-        blk = iter->second;
-        cout << blk->name() << ";" << endl;
+        to = iter->second;
+        cout << to->name() << ";" << endl;
+
+        loop = new NatrualLoop(*cfg, *iter);
+        loops.push_back(loop);
+    }
+
+    list<NatrualLoop *>::iterator loop_iter;
+    list<NatrualLoop *>::iterator loop_iter2;
+
+    cout << "Loops: " << endl;
+    for(loop_iter = loops.begin(); loop_iter != loops.end(); loop_iter++) {
+        loop = *loop_iter;
+        loop->info(cout);
+        for(loop_iter2 = loops.begin(); loop_iter2 != loops.end(); loop_iter2++) {
+            NatrualLoop *loop2 = *loop_iter2;
+            if (loop->is_nested_in(*loop2)) {
+                cout << "    Nested in ";
+                loop2->info(cout);
+            }
+        }
     }
 
     /*
