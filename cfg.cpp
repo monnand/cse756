@@ -159,25 +159,64 @@ CondJmp::CondJmp(SgStatement *stmt, int id)
     dstlab = uncond.get_dst();
 }
 
+const int ENTRY_BLOCK = -1;
+const int EXIT_BLOCK = -2;
+
 class BasicBlock {
     private:
         list<Instruction *> inst_list;
         static int nr_blk;
         int id;
 
-        list<string> dst_labs;
-        list<string> labs;
+        set<string> dst_labs;
+        set<string> labs;
+
+        set<BasicBlock *> successors;
+        set<BasicBlock *> predecessors;
+
     public:
         BasicBlock() {
             id = nr_blk;
             nr_blk++;
         }
+        BasicBlock(int id) {
+            if (id == ENTRY_BLOCK || id == EXIT_BLOCK)
+                this->id = id;
+        }
         virtual ~BasicBlock() {}
         int add_instruction(Instruction *inst);
+
+        set<BasicBlock *> &get_successors() { return successors; }
+        set<BasicBlock *> &get_predecessors() { return predecessors; }
+
+        int get_id() { return id; }
+
+        string name() { 
+            stringstream ss;
+            if (id >= 0) {
+                ss << "blk" << id;
+            } else if (id == ENTRY_BLOCK) {
+                ss << "ENTRY";
+            } else if (id == EXIT_BLOCK) {
+                ss << "EXIT";
+            } else {
+                ss << "UNKNOWN";
+            }
+            return ss.str();
+        }
+
+        bool point_to(BasicBlock *blk);
+        BasicBlock *append_exit() {
+            BasicBlock *exitblk = new BasicBlock(EXIT_BLOCK);
+            successors.insert(exitblk);
+            exitblk->predecessors.insert(this);
+            return exitblk;
+        }
+
         void basic_info(ostream &out) {
             out << "block id: " << id << endl;
             out << "\tPoint to ";
-            list<string>::iterator iter;
+            set<string>::iterator iter;
             for (iter = dst_labs.begin(); iter != dst_labs.end(); iter++) {
                 out << *iter << " ";
             }
@@ -199,18 +238,47 @@ class BasicBlock {
 
 int BasicBlock::nr_blk = 0;
 
+bool BasicBlock::point_to(BasicBlock *blk) {
+    set<string>::iterator iter;
+    set<string>::iterator test;
+    bool ret = false;
+    if (id < 0) {
+        if (blk->id == 0 && id == ENTRY_BLOCK)
+            ret = true;
+        else
+            ret = false;
+    }
+    
+    if (id + 1 == blk->id)
+        ret = true;
+    for (iter = dst_labs.begin(); iter != dst_labs.end(); iter++) {
+        test = blk->labs.find(*iter);
+        if (test != blk->labs.end()) {
+            ret = true;
+            break;
+        }
+    }
+
+    if (ret) {
+        set<BasicBlock *>::iterator b;
+        successors.insert(blk);
+        blk->predecessors.insert(this);
+    }
+    return ret;
+}
+
 int BasicBlock::add_instruction(Instruction *inst) {
     const list<string> &ilabs = inst->get_labs();
     list<string>::const_iterator iter;
 
     for(iter = ilabs.begin(); iter != ilabs.end(); iter++) {
         string l = *iter;
-        labs.push_back(l);
+        labs.insert(l);
     }
 
     if (inst->is_jmp()) {
         string dst = inst->get_dst();
-        dst_labs.push_back(dst);
+        dst_labs.insert(dst);
     }
 
     inst_list.push_back(inst);
@@ -378,13 +446,143 @@ Instruction *InstructionList::append(SgStatement *stmt) {
     return inst;
 }
 
-/*
-class ControlFlowGraph {
+class GraphTraverser {
     public:
-        ControlFlowGraph() {}
-        virtual ~ControlFlowGraph() {}
+        virtual int visit_node(BasicBlock *blk) { return 0; }
+        virtual int visit_edge(BasicBlock *from, BasicBlock *to) { return 0; }
 };
-*/
+
+class ControlFlowGraph {
+    private:
+        set<BasicBlock *> blklist;
+        BasicBlock *entry;
+        BasicBlock *exit;
+
+        int dfs_traverse_r(GraphTraverser *tr, BasicBlock *start, bool backward, set<int> *visited);
+    public:
+
+        BasicBlock *get_entry() { return entry; }
+        BasicBlock *get_exit() { return exit; }
+        set<BasicBlock *> &get_blocks() { return blklist; }
+
+        ControlFlowGraph() { entry = NULL; exit = NULL; }
+        virtual ~ControlFlowGraph();
+        int build_graph(list<BasicBlock *> &blist);
+
+        int dfs_traverse(GraphTraverser *tr, BasicBlock *start = NULL, bool backward = false, set<int> *visited = NULL);
+};
+
+int ControlFlowGraph::dfs_traverse(GraphTraverser *tr, BasicBlock *start, bool backward, set<int> *visited) {
+    if (NULL == start) {
+        if (backward)
+            start = exit;
+        else
+            start = entry;
+    }
+    set<int> empty;
+    if (NULL == visited) {
+        visited = &empty;
+    }
+    return dfs_traverse_r(tr, start, backward, visited);
+}
+
+int ControlFlowGraph::dfs_traverse_r(GraphTraverser *tr, BasicBlock *start, bool backward, set<int> *visited) {
+    set<int>::iterator test;
+    test = visited->find(start->get_id());
+    int i;
+    if (test == visited->end()) {
+        i = tr->visit_node(start);
+        visited->insert(start->get_id());
+        if (i != 0)
+            return i;
+    } else {
+        return 0;
+    }
+
+    set<BasicBlock *>::iterator iter;
+    set<BasicBlock *> &adjs = start->get_successors();
+    if (backward) {
+        adjs = start->get_predecessors();
+    }
+
+    for(iter = adjs.begin(); iter != adjs.end(); iter++) {
+        BasicBlock *blk = *iter;
+        test = visited->find(blk->get_id());
+
+        /* We haven't visit this node */
+        if (test == visited->end()) {
+            i = tr->visit_edge(start, blk);
+            if (i != 0)
+                return i;
+
+            i = dfs_traverse_r(tr, blk, backward, visited);
+            if (i != 0)
+                return i;
+        }
+    }
+    return 0;
+}
+
+ControlFlowGraph::~ControlFlowGraph() {
+    set<BasicBlock *>::iterator iter;
+    for(iter = blklist.begin(); iter != blklist.end(); iter++) {
+        BasicBlock *blk = *iter;
+        if (NULL != blk)
+            delete blk;
+    }
+}
+
+int ControlFlowGraph::build_graph(list<BasicBlock *> &blist) {
+    list<BasicBlock *>::iterator iter;
+    list<BasicBlock *>::iterator j;
+    BasicBlock *entry = new BasicBlock(ENTRY_BLOCK);
+    BasicBlock *exit = entry;
+    this->entry = entry;
+
+    blist.push_front(entry);
+    for(iter = blist.begin(); iter != blist.end(); iter++) {
+        BasicBlock *blk = *iter;
+        for (j = blist.begin(); j != blist.end(); j++) {
+            blk->point_to(*j);
+        }
+        blklist.insert(blk);
+
+        if (exit->get_id() < blk->get_id()) {
+            exit = blk;
+        }
+    }
+
+    exit = exit->append_exit();
+    this->exit = exit;
+    blklist.insert(exit);
+    return 0;
+}
+
+typedef pair<BasicBlock *, BasicBlock *> CFGEdge;
+
+int find_back_edges(ControlFlowGraph *cfg, list<CFGEdge> &bedges) {
+    set<BasicBlock *> &blks = cfg->get_blocks();
+    set<BasicBlock *>::iterator blk_iter;
+
+    for (blk_iter = blks.begin(); blk_iter != blks.end(); blk_iter++) {
+        set<BasicBlock *> &sucs = (*blk_iter)->get_successors();
+        set<BasicBlock *>::iterator suc;
+
+        BasicBlock *from, *to;
+        from = *blk_iter;
+        for (suc = sucs.begin(); suc != sucs.end(); suc++) {
+            to = *suc;
+            if (to->get_id() < 0)
+                continue;
+            if (from->get_id() >= to->get_id()) {
+                CFGEdge e = CFGEdge(from, to);
+                bedges.push_back(e);
+            }
+        }
+    }
+
+    return 0;
+}
 
 int examine_scope(SgScopeStatement *scope, InstructionList *ilist) {
     SgBasicBlock *body;
@@ -402,16 +600,6 @@ int examine_scope(SgScopeStatement *scope, InstructionList *ilist) {
         SgStatement *stmt = *stmt_iter;
         ilist->append(stmt);
     }
-
-    list<BasicBlock *> blist;
-    ilist->build_basic_blocks(blist);
-
-    list<BasicBlock *>::iterator iter;
-
-    for(iter = blist.begin(); iter != blist.end(); iter++) {
-        (*iter) -> basic_info(cout);
-    }
-
     return 0;
 }
 
@@ -431,6 +619,39 @@ int examine_func(SgFunctionDeclaration *decl, InstructionList *ilist) {
     SgBasicBlock* body = def->get_body();
     return examine_scope(body, ilist);
 }
+
+ControlFlowGraph *build_cfg(InstructionList *ilist) {
+    ControlFlowGraph *cfg = new ControlFlowGraph();
+    list<BasicBlock *> blist;
+    ilist->build_basic_blocks(blist);
+
+    list<BasicBlock *>::iterator iter;
+    list<BasicBlock *>::iterator j;
+
+    /*
+    for(iter = blist.begin(); iter != blist.end(); iter++) {
+        (*iter) -> basic_info(cout);
+    }
+    */
+
+    cfg->build_graph(blist);
+
+    set<BasicBlock *> &bset = cfg->get_blocks();
+
+    /*
+    for(iter = blist.begin(); iter != blist.end(); iter++) {
+        BasicBlock *blk = *iter;
+        for (j = blist.begin(); j != blist.end(); j++) {
+            if (blk->point_to(*j))  {
+                cout << "blk" << blk->get_id() << " -> " << "blk" << (*j) ->get_id() << endl;
+            }
+        }
+    }
+    */
+    return cfg;
+}
+
+
 
 string prettyPrint(SgProject* project) {
     string ret = "";
@@ -465,7 +686,34 @@ string prettyPrint(SgProject* project) {
     }
 
     /* Analyze the list of instructions */
+    ControlFlowGraph *cfg = build_cfg(ilist);
+    list<CFGEdge> bedges;
 
+    find_back_edges(cfg, bedges);
+    list<CFGEdge>::iterator iter;
+
+    cout << "Backedges: " << endl;
+    for (iter = bedges.begin(); iter != bedges.end(); iter++) {
+        BasicBlock *blk;
+        blk = iter->first;
+        cout << blk->name() << "->";
+
+        blk = iter->second;
+        cout << blk->name() << ";" << endl;
+    }
+
+    /*
+    set<BasicBlock *> &blks = cfg->get_blocks();
+    set<BasicBlock *>::iterator blk_iter;
+
+    for (blk_iter = blks.begin(); blk_iter != blks.end(); blk_iter++) {
+        set<BasicBlock *> &sucs = (*blk_iter)->get_successors();
+        set<BasicBlock *>::iterator suc;
+        for (suc = sucs.begin(); suc != sucs.end(); suc++) {
+            cout << (*blk_iter)->name() << " -> " << (*suc)->name() << ";" << endl;
+        }
+    }
+    */
 
     return ret;
 }
