@@ -733,84 +733,10 @@ class NodeCollector : public GraphTraverser {
 
 class BackedgeFinder : public GraphTraverser {
     private:
-        map<BasicBlock *, int> blkcolors;
         set<CFGEdge> backedges;
-        static int GREY;
-        static int BLACK;
-
-        bool is_white(BasicBlock *blk) {
-            map<BasicBlock *, int>::iterator test;
-            test = blkcolors.find(blk);
-            
-            /* We cannot find this block. This means we haven't visited it */
-            return test == blkcolors.end();
-        }
-
-        bool is_grey(BasicBlock *blk) {
-            map<BasicBlock *, int>::iterator test;
-            test = blkcolors.find(blk);
-            if (test == blkcolors.end())
-                return false;
-            if (test->second == GREY) {
-                return true;
-            }
-            return false;
-        }
-
-        bool is_black(BasicBlock *blk) {
-            map<BasicBlock *, int>::iterator test;
-            test = blkcolors.find(blk);
-            if (test == blkcolors.end())
-                return false;
-            if (test->second == BLACK) {
-                return true;
-            }
-            return false;
-        }
-
-        void set_grey(BasicBlock *blk) {
-            map<BasicBlock *, int>::iterator test;
-            test = blkcolors.find(blk);
-            if (test == blkcolors.end()) {
-                blkcolors[blk] = 0;
-            }
-            blkcolors[blk] = GREY;
-        }
-
-        void set_black(BasicBlock *blk) {
-            map<BasicBlock *, int>::iterator test;
-            test = blkcolors.find(blk);
-            if (test == blkcolors.end()) {
-                blkcolors[blk] = 0;
-            }
-            blkcolors[blk] = BLACK;
-        }
-
     public:
-        virtual int visit_node(BasicBlock *blk) {
-            set_grey(blk);
-            return 0;
-        }
-
-        virtual int visit_edge(BasicBlock *from, BasicBlock *to) {
-            if (!is_white(to)) {
-                return 1;
-            }
-            if (is_grey(to)) {
-                backedges.insert(CFGEdge(from, to));
-            }
-            return 0;
-        }
-
         virtual int meet_visited_edge(BasicBlock *from, BasicBlock *to) {
-            if (is_grey(to)) {
-                backedges.insert(CFGEdge(from, to));
-            }
-            return 0;
-        }
-
-        virtual int after_visit_adjs(BasicBlock *blk) {
-            set_black(blk);
+            backedges.insert(CFGEdge(from, to));
             return 0;
         }
 
@@ -818,9 +744,6 @@ class BackedgeFinder : public GraphTraverser {
             return backedges;
         }
 };
-
-int BackedgeFinder::GREY = 1;
-int BackedgeFinder::BLACK = 2;
 
 int find_back_edges(ControlFlowGraph *cfg, list<CFGEdge> &bedges) {
     BackedgeFinder finder;
