@@ -265,7 +265,9 @@ bool BasicBlock::point_to(BasicBlock *blk) {
         /* current block is the code before blk */
         if (id + 1 == blk->id) {
             /* There is no jump or only conditional jump in current block */
-            if (NULL == jmp_inst || !jmp_inst->is_uncond_jmp())
+            if (NULL == jmp_inst)
+                ret = true;
+            else if (jmp_inst->is_cond_jmp())
                 ret = true;
         }
         for (iter = dst_labs.begin(); !ret && iter != dst_labs.end(); iter++) {
@@ -456,10 +458,12 @@ Instruction *InstructionList::append(SgStatement *stmt) {
             jmp_next.push_back(inst->get_id());
             is_jmp_next = false;
         }
-        if (inst->is_jmp() && !inst->is_return()) {
+        if (inst->is_jmp()) {
             is_jmp_next = true;
-            string dst = inst->get_dst();
-            jmp_dsts.push_back(dst);
+            if (!inst->is_return()) {
+                string dst = inst->get_dst();
+                jmp_dsts.push_back(dst);
+            }
         } else {
             is_jmp_next = false;
         }
