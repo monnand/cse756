@@ -471,6 +471,9 @@ class GraphTraverser {
     public:
         virtual int visit_node(BasicBlock *blk) { return 0; }
         virtual int visit_edge(BasicBlock *from, BasicBlock *to) { return 0; }
+        virtual int after_visit_adjs(BasicBlock *blk) { return 0; }
+        virtual int meet_visited_node(BasicBlock *blk) { return 0; }
+        virtual int meet_visited_edge(BasicBlock *from, BasicBlock *to) { return 0; }
         GraphTraverser() {}
         virtual ~GraphTraverser() {}
 };
@@ -537,9 +540,14 @@ int ControlFlowGraph::dfs_traverse_r(GraphTraverser &tr, BasicBlock *start, bool
     if (test == visited->end()) {
         i = tr.visit_node(start);
         visited->insert(start->get_id());
-        if (i != 0)
+        if (i < 0)
             return i;
+        if (i > 0)
+            return 0;
     } else {
+        i = tr.meet_visited_node(start);
+        if (i < 0)
+            return i;
         return 0;
     }
 
@@ -556,15 +564,26 @@ int ControlFlowGraph::dfs_traverse_r(GraphTraverser &tr, BasicBlock *start, bool
         /* We haven't visit this node */
         if (test == visited->end()) {
             i = tr.visit_edge(start, blk);
-            if (i != 0)
+            if (i < 0)
                 return i;
+            if (i > 0)
+                continue;
 
             i = dfs_traverse_r(tr, blk, backward, visited);
-            if (i != 0)
+            if (i < 0)
                 return i;
+        } else {
+            i = tr.meet_visited_node(blk);
+            if (i < 0)
+                return i;
+            i = tr.meet_visited_edge(start, blk);
+            if (i < 0)
+                return i;
+
         }
     }
-    return 0;
+    i = tr.after_visit_adjs(start);
+    return i;
 }
 
 ControlFlowGraph::~ControlFlowGraph() {
@@ -607,30 +626,6 @@ int ControlFlowGraph::build_graph(list<BasicBlock *> &blist) {
 }
 
 typedef pair<BasicBlock *, BasicBlock *> CFGEdge;
-
-int find_back_edges(ControlFlowGraph *cfg, list<CFGEdge> &bedges) {
-    set<BasicBlock *> &blks = cfg->get_blocks();
-    set<BasicBlock *>::iterator blk_iter;
-
-    for (blk_iter = blks.begin(); blk_iter != blks.end(); blk_iter++) {
-        set<BasicBlock *> &sucs = (*blk_iter)->get_successors();
-        set<BasicBlock *>::iterator suc;
-
-        BasicBlock *from, *to;
-        from = *blk_iter;
-        for (suc = sucs.begin(); suc != sucs.end(); suc++) {
-            to = *suc;
-            if (to->get_id() < 0)
-                continue;
-            if (from->get_id() >= to->get_id()) {
-                CFGEdge e = CFGEdge(from, to);
-                bedges.push_back(e);
-            }
-        }
-    }
-
-    return 0;
-}
 
 int examine_scope(SgScopeStatement *scope, InstructionList *ilist) {
     SgBasicBlock *body;
@@ -713,6 +708,133 @@ class NodeCollector : public GraphTraverser {
         }
 };
 
+class BackedgeFinder : public GraphTraverser {
+    private:
+        map<BasicBlock *, int> blkcolors;
+        set<CFGEdge> backedges;
+        static int GREY;
+        static int BLACK;
+
+        bool is_white(BasicBlock *blk) {
+            map<BasicBlock *, int>::iterator test;
+            test = blkcolors.find(blk);
+            
+            /* We cannot find this block. This means we haven't visited it */
+            return test == blkcolors.end();
+        }
+
+        bool is_grey(BasicBlock *blk) {
+            map<BasicBlock *, int>::iterator test;
+            test = blkcolors.find(blk);
+            if (test == blkcolors.end())
+                return false;
+            if (test->second == GREY) {
+                return true;
+            }
+            return false;
+        }
+
+        bool is_black(BasicBlock *blk) {
+            map<BasicBlock *, int>::iterator test;
+            test = blkcolors.find(blk);
+            if (test == blkcolors.end())
+                return false;
+            if (test->second == BLACK) {
+                return true;
+            }
+            return false;
+        }
+
+        void set_grey(BasicBlock *blk) {
+            map<BasicBlock *, int>::iterator test;
+            test = blkcolors.find(blk);
+            if (test == blkcolors.end()) {
+                blkcolors[blk] = 0;
+            }
+            blkcolors[blk] = GREY;
+        }
+
+        void set_black(BasicBlock *blk) {
+            map<BasicBlock *, int>::iterator test;
+            test = blkcolors.find(blk);
+            if (test == blkcolors.end()) {
+                blkcolors[blk] = 0;
+            }
+            blkcolors[blk] = BLACK;
+        }
+
+    public:
+        virtual int visit_node(BasicBlock *blk) {
+            set_grey(blk);
+            return 0;
+        }
+
+        virtual int visit_edge(BasicBlock *from, BasicBlock *to) {
+            if (!is_white(to)) {
+                return 1;
+            }
+            if (is_grey(to)) {
+                backedges.insert(CFGEdge(from, to));
+            }
+            return 0;
+        }
+
+        virtual int meet_visited_edge(BasicBlock *from, BasicBlock *to) {
+            if (is_grey(to)) {
+                backedges.insert(CFGEdge(from, to));
+            }
+            return 0;
+        }
+
+        virtual int after_visit_adjs(BasicBlock *blk) {
+            set_black(blk);
+            return 0;
+        }
+
+        set<CFGEdge> &get_backedges() {
+            return backedges;
+        }
+};
+
+int BackedgeFinder::GREY = 1;
+int BackedgeFinder::BLACK = 2;
+
+int find_back_edges(ControlFlowGraph *cfg, list<CFGEdge> &bedges) {
+    BackedgeFinder finder;
+
+    cfg->dfs_traverse(finder);
+    set<CFGEdge> &backedges = finder.get_backedges();
+    set<CFGEdge>::iterator edge;
+
+    for (edge = backedges.begin(); edge != backedges.end(); edge++) {
+        bedges.push_back(*edge);
+    }
+    /*
+    set<BasicBlock *> &blks = cfg->get_blocks();
+    set<BasicBlock *>::iterator blk_iter;
+
+    for (blk_iter = blks.begin(); blk_iter != blks.end(); blk_iter++) {
+        set<BasicBlock *> &sucs = (*blk_iter)->get_successors();
+        set<BasicBlock *>::iterator suc;
+
+        BasicBlock *from, *to;
+        from = *blk_iter;
+        for (suc = sucs.begin(); suc != sucs.end(); suc++) {
+            to = *suc;
+            if (to->get_id() < 0)
+                continue;
+            if (from->get_id() >= to->get_id()) {
+                CFGEdge e = CFGEdge(from, to);
+                bedges.push_back(e);
+            }
+        }
+    }
+    */
+
+    return 0;
+}
+
+
 class NatrualLoop {
     private:
         set<BasicBlock *> loop_set;
@@ -722,6 +844,14 @@ class NatrualLoop {
         set<BasicBlock *> &get_blocks() { return loop_set; }
 
         bool is_nested_in(NatrualLoop &outter);
+        int nr_instructions() {
+            set<BasicBlock *>::iterator i;
+            int ret = 0;
+            for (i = loop_set.begin(); i != loop_set.end(); i++) {
+                ret += (*i)->nr_instructions();
+            }
+            return ret;
+        }
 };
 
 NatrualLoop::NatrualLoop(ControlFlowGraph &cfg, CFGEdge &backedge) {
@@ -804,20 +934,21 @@ string prettyPrint(SgProject* project) {
     list<CFGEdge>::iterator iter;
     set<BasicBlock *> loop_blocks;
 
-    /*
+
+#ifdef DEBUG_BACKEDGE
     cout << "Backedges: " << endl;
-    */
+#endif
     NatrualLoop *loop = NULL;
     list<NatrualLoop *> loops;
     for (iter = bedges.begin(); iter != bedges.end(); iter++) {
-        /*
+#ifdef DEBUG_BACKEDGE
         BasicBlock *from, *to;
         from = iter->first;
         cout << from->name() << "->";
 
         to = iter->second;
         cout << to->name() << ";" << endl;
-        */
+#endif
 
         loop = new NatrualLoop(*cfg, *iter);
         loops.push_back(loop);
@@ -878,6 +1009,7 @@ string prettyPrint(SgProject* project) {
         /*
         cout << "  ";
         loop->info(cout);
+        cout << " Nr inst: " << loop->nr_instructions() << endl;
         */
         
         int nest_lev = 0;
