@@ -469,10 +469,33 @@ Instruction *InstructionList::append(SgStatement *stmt) {
 
 class GraphTraverser {
     public:
+        /* When we meet a fresh new node --- haven't visited before 
+         * Return:
+         * 0  - continue;
+         * >0 - continue;
+         * <0 - abort the traversal
+         */      
         virtual int visit_node(BasicBlock *blk) { return 0; }
+
+        /* When we meet an edge that should be in the DFST (Depth-First Spanning Tree)
+         * We will visit the subtree rooted from /to/.
+         * Return:
+         * 0  - continue;
+         * >0 - do not recursively call the traversal function from /to/
+         * <0 - abort traversal.
+         */
         virtual int visit_edge(BasicBlock *from, BasicBlock *to) { return 0; }
+
+        /* After we visited all adjs of blk (and the adjs' adjs, etc.)
+         */
         virtual int after_visit_adjs(BasicBlock *blk) { return 0; }
+
+        /* When we meet a node which have seen before.
+         */
         virtual int meet_visited_node(BasicBlock *blk) { return 0; }
+
+        /* When we meet an edge not in DFST
+         */
         virtual int meet_visited_edge(BasicBlock *from, BasicBlock *to) { return 0; }
         GraphTraverser() {}
         virtual ~GraphTraverser() {}
